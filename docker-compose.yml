@@ -18,5 +18,37 @@ services:
       timeout: 5s
       retries: 10
 
+  api:
+    build: ./api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: "3001"
+      DATABASE_URL_API: postgresql://api_reader:${API_DB_PASSWORD}@db:5432/indicadores
+      CORS_ORIGENES: http://localhost:3000
+      THROTTLE_LIMIT: "60"
+      THROTTLE_TTL_MS: "60000"
+    ports:
+      - "127.0.0.1:3001:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/salud/vivo || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # docker compose --profile etl run --rm etl diario
+  # Por defecto corre en modo simulado. Para el modo real hay que pasar BCCR_MODO=real y BCCR_TOKEN con -e.
+  etl:
+    profiles: ["etl"]
+    build: ./etl
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      BCCR_MODO: ${BCCR_MODO:-simulado}
+      BCCR_BASE_URL: https://apim.bccr.fi.cr/SDDE/api/Bccr.GE.SDDE.Publico.Indicadores.API
+      DATABASE_URL_ETL: postgresql://etl_writer:${ETL_DB_PASSWORD}@db:5432/indicadores
+
 volumes:
   db_datos:
