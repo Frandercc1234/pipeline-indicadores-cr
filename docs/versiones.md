@@ -8,7 +8,7 @@ Resueltas el 2026-11-16 (paso 1). Ninguna se actualiza sin pasar CI y las prueba
 |---|---|
 | Python (venv local e imagen `python:3.12-slim`) | 3.12.10 |
 | Node.js local | 24.18.0 (imagen Docker: `node:24-alpine`, tag exacto en el paso 8) |
-| PostgreSQL | 17 (imagen `postgres:17-alpine`, tag exacto en el paso 3) |
+| PostgreSQL | 17.12 (imagen `postgres:17.12-alpine`, en docker-compose.yml) |
 
 ## etl (requirements*.txt)
 
