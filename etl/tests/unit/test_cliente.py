@@ -4,7 +4,7 @@ from datetime import date
 import httpx
 import pytest
 
-from etl.bccr_cliente import ClienteBccr, ErrorBccr, tramos_anuales
+from etl.bccr_cliente import PAUSA_ENTRE_TRAMOS_S, ClienteBccr, ErrorBccr, tramos_anuales
 
 BASE = "https://bccr.example.test/api"
 TOKEN = "TOKEN-DE-PRUEBA-NO-REAL-123"
@@ -60,6 +60,8 @@ def test_pedido_de_varios_anios_hace_un_pedido_por_tramo(cliente, respx_mock, re
     ruta = respx_mock.get(RUTA).mock(return_value=httpx.Response(200, json=respuesta_real))
     cliente.serie("tc_compra", 317, date(2015, 1, 1), date(2017, 6, 30))
     assert ruta.call_count == 3
+    # Entre un tramo y el siguiente espera, para no provocar el 429 del BCCR.
+    assert cliente.pausas == [PAUSA_ENTRE_TRAMOS_S, PAUSA_ENTRE_TRAMOS_S]
 
 
 def test_reintenta_ante_503_y_termina_bien(cliente, respx_mock, respuesta_real):

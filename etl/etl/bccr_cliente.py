@@ -14,6 +14,7 @@ USER_AGENT = "pipeline-indicadores-cr/1.0 (Mozilla/5.0 compatible)"
 TIMEOUT_SEGUNDOS = 30
 MAX_INTENTOS = 3
 DIAS_POR_TRAMO = 365
+PAUSA_ENTRE_TRAMOS_S = 1.5
 
 
 class ErrorBccr(Exception):
@@ -72,7 +73,9 @@ class ClienteBccr:
     def serie(self, slug: str, codigo: int, desde: date, hasta: date) -> list[Fila]:
         """Series del indicador entre dos fechas. `slug` solo lo usa el cliente simulado."""
         filas: list[Fila] = []
-        for inicio, fin in tramos_anuales(desde, hasta):
+        for numero, (inicio, fin) in enumerate(tramos_anuales(desde, hasta)):
+            if numero > 0:
+                self._dormir(PAUSA_ENTRE_TRAMOS_S)  # el BCCR responde 429 si se le pide muy rápido
             filas.extend(self._pedir_tramo(codigo, inicio, fin))
         return filas
 
