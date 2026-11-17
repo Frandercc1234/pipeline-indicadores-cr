@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Res } from '@nestjs/common';
+import { Controller, Get, Header, Inject, Res } from '@nestjs/common';
 import {
   ApiOkResponse,
   ApiOperation,
@@ -48,12 +48,15 @@ export class SaludController {
   async salud(
     @Res({ passthrough: true }) respuesta: Response,
   ): Promise<EstadoSalud> {
+    // La salud nunca se cachea, ni el 200 ni el 503.
+    respuesta.setHeader('Cache-Control', 'no-store');
     const estado = await this.servicio.comprobar();
     if (estado.estado === 'degradado') respuesta.status(503);
     return estado;
   }
 
   @Get('vivo')
+  @Header('Cache-Control', 'no-store')
   @ApiOperation({
     summary: 'La API está viva',
     description:

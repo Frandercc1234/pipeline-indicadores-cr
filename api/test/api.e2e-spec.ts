@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { Logger } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { Client } from 'pg';
@@ -7,6 +8,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configurarApp } from '../src/comun/configurar-app';
 import { CONFIG, leerConfig, type Config } from '../src/config/config';
+import { PG_POOL } from '../src/db/db.module';
 
 const SLUGS = [
   'tc_compra',
@@ -18,14 +20,22 @@ const SLUGS = [
 ];
 const HOSTS_LOCALES = ['localhost', '127.0.0.1', 'db', 'postgres'];
 
+/** Pool que simula una base caída: toda consulta falla. */
+const BASE_CAIDA = {
+  query: () => Promise.reject(new Error('base caída: secreto-de-prueba')),
+  end: () => Promise.resolve(),
+};
+
 async function crearApp(
   ajustes: Partial<Config> = {},
+  pool?: unknown,
 ): Promise<NestExpressApplication> {
   const config = { ...leerConfig(), ...ajustes };
-  const modulo = await Test.createTestingModule({ imports: [AppModule] })
+  let constructor = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(CONFIG)
-    .useValue(config)
-    .compile();
+    .useValue(config);
+  if (pool) constructor = constructor.overrideProvider(PG_POOL).useValue(pool);
+  const modulo = await constructor.compile();
   const app = modulo.createNestApplication<NestExpressApplication>();
   configurarApp(app, config);
   await app.init();
@@ -280,6 +290,108 @@ describe('API de indicadores (e2e)', () => {
     });
   });
 
+  describe('Cache-Control', () => {
+    const PUBLICO = 'public, max-age=3600';
+
+    it.each([
+      '/indicadores',
+      '/indicadores/tc_venta',
+      '/indicadores/tc_venta/serie',
+    ])('200 en %s: se cachea una hora', async (ruta) => {
+      const { status, headers } = await pedir(ruta);
+      expect(status).toBe(200);
+      expect(headers['cache-control']).toBe(PUBLICO);
+    });
+
+    it.each([
+      ['400 por slug inválido', '/indicadores/TC_VENTA', 400],
+      [
+        '400 por fecha inválida',
+        '/indicadores/tc_venta/serie?desde=2023-02-30',
+        400,
+      ],
+      ['404 por indicador inexistente', '/indicadores/no_existe', 404],
+      [
+        '404 en la serie de un indicador inexistente',
+        '/indicadores/no_existe/serie',
+        404,
+      ],
+      ['404 por ruta inexistente', '/nada', 404],
+    ])('%s: no-store, nunca public', async (_nombre, ruta, estado) => {
+      const { status, headers } = await pedir(ruta);
+      expect(status).toBe(estado);
+      expect(headers['cache-control']).toBe('no-store');
+    });
+
+    it('/salud y /salud/vivo no se cachean', async () => {
+      expect((await pedir('/salud')).headers['cache-control']).toBe('no-store');
+      expect((await pedir('/salud/vivo')).headers['cache-control']).toBe(
+        'no-store',
+      );
+    });
+
+    describe('con la base caída', () => {
+      let caida: NestExpressApplication;
+
+      beforeAll(async () => {
+        caida = await crearApp({ throttleLimit: 10_000 }, BASE_CAIDA);
+      });
+
+      afterAll(async () => {
+        await caida.close();
+      });
+
+      it('500 en /indicadores: no-store y sin filtrar el error interno', async () => {
+        const registro = jest
+          .spyOn(Logger.prototype, 'error')
+          .mockImplementation(() => undefined);
+        const { status, body, headers } = await pedir(
+          '/indicadores',
+          {},
+          caida.getHttpServer(),
+        );
+        registro.mockRestore();
+        expect(status).toBe(500);
+        expect(headers['cache-control']).toBe('no-store');
+        expect(body).toEqual({
+          statusCode: 500,
+          error: 'Error interno',
+          mensaje: 'Ocurrió un error inesperado',
+        });
+        expect(JSON.stringify(body)).not.toContain('secreto-de-prueba');
+      });
+
+      it('500 en la serie: no-store', async () => {
+        const registro = jest
+          .spyOn(Logger.prototype, 'error')
+          .mockImplementation(() => undefined);
+        const { status, headers } = await pedir(
+          '/indicadores/tc_venta/serie',
+          {},
+          caida.getHttpServer(),
+        );
+        registro.mockRestore();
+        expect(status).toBe(500);
+        expect(headers['cache-control']).toBe('no-store');
+      });
+
+      it('503 en /salud: degradado, base en error y no-store', async () => {
+        const registro = jest
+          .spyOn(Logger.prototype, 'warn')
+          .mockImplementation(() => undefined);
+        const { status, body, headers } = await pedir(
+          '/salud',
+          {},
+          caida.getHttpServer(),
+        );
+        registro.mockRestore();
+        expect(status).toBe(503);
+        expect(headers['cache-control']).toBe('no-store');
+        expect(body).toMatchObject({ estado: 'degradado', base: 'error' });
+      });
+    });
+  });
+
   describe('429', () => {
     it('corta a la cuarta petición cuando el límite es 3', async () => {
       const limitada = await crearApp({
@@ -291,8 +403,13 @@ describe('API de indicadores (e2e)', () => {
         for (let i = 0; i < 3; i++) {
           expect((await pedir('/salud/vivo', {}, servidor)).status).toBe(200);
         }
-        const { status, body } = await pedir('/salud/vivo', {}, servidor);
+        const { status, body, headers } = await pedir(
+          '/salud/vivo',
+          {},
+          servidor,
+        );
         expect(status).toBe(429);
+        expect(headers['cache-control']).toBe('no-store');
         expect(body).toMatchObject({
           statusCode: 429,
           error: 'Demasiadas peticiones',

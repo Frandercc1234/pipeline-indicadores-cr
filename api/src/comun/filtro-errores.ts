@@ -41,6 +41,8 @@ export class FiltroErrores implements ExceptionFilter {
 
   catch(excepcion: unknown, host: ArgumentsHost): void {
     const respuesta = host.switchToHttp().getResponse<Response>();
+    // Ningún error se cachea. Pisa el Cache-Control que haya puesto la ruta.
+    respuesta.setHeader('Cache-Control', 'no-store');
     if (excepcion instanceof HttpException) {
       const estado = excepcion.getStatus();
       respuesta.status(estado).json({

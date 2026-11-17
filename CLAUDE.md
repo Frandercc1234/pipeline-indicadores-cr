@@ -290,7 +290,7 @@ GRANT USAGE, SELECT ON SEQUENCE carga_id_seq, revision_id_seq TO etl_writer;
 - **API:** solo `GET`. ValidationPipe con `whitelist: true` y `forbidNonWhitelisted: true`. `slug` validado contra `^[a-z_]+$`. Fechas en formato `YYYY-MM-DD`, `desde <= hasta` y `desde >= 2015-01-01`. Todas las consultas SQL son parametrizadas (`$1`, `$2`), nunca concatenadas.
 - **Límite de peticiones:** 60 por minuto por IP (`THROTTLE_LIMIT`, `THROTTLE_TTL_MS`). Responde 429.
 - **CORS:** solo `CORS_ORIGENES` (la URL de Vercel y `http://localhost:3000`).
-- **Headers:** `helmet` no se agrega (sería una dependencia más). La API pone `X-Content-Type-Options: nosniff` y `Cache-Control: public, max-age=3600` en las respuestas de datos.
+- **Headers:** `helmet` no se agrega (sería una dependencia más). La API pone `X-Content-Type-Options: nosniff` en todas las respuestas y `Cache-Control: public, max-age=3600` solo en las respuestas 200 de `/indicadores*`. Todo error (4xx y 5xx) y `/salud` llevan `Cache-Control: no-store`.
 - **Docker:** la imagen de la API corre con el usuario `node`, no como root.
 - **Errores:** nunca se devuelve un stack trace. El formato es único: `{ "statusCode": 404, "error": "No encontrado", "mensaje": "..." }`.
 

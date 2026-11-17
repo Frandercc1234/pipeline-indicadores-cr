@@ -1,4 +1,4 @@
-import { Controller, Get, Header, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseInterceptors } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiNotFoundResponse,
@@ -7,14 +7,14 @@ import {
   ApiTags,
   ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
+import { CacheDatos } from '../comun/cache-datos.interceptor';
 import { ErrorDto } from '../comun/error.dto';
 import { SlugParamDto, SerieQueryDto } from './dto/consultas.dto';
 import { IndicadorDto, SerieDto } from './dto/indicador.dto';
 import { IndicadoresService } from './indicadores.service';
 
-const CACHE = 'public, max-age=3600';
-
 @ApiTags('Indicadores')
+@UseInterceptors(CacheDatos)
 @ApiTooManyRequestsResponse({
   type: ErrorDto,
   description: 'Más de 60 peticiones por minuto desde la misma IP',
@@ -24,7 +24,6 @@ export class IndicadoresController {
   constructor(private readonly servicio: IndicadoresService) {}
 
   @Get()
-  @Header('Cache-Control', CACHE)
   @ApiOperation({
     summary: 'Lista los indicadores con su último valor',
     description:
@@ -36,7 +35,6 @@ export class IndicadoresController {
   }
 
   @Get(':slug')
-  @Header('Cache-Control', CACHE)
   @ApiOperation({ summary: 'Detalle de un indicador' })
   @ApiOkResponse({
     type: IndicadorDto,
@@ -60,7 +58,6 @@ export class IndicadoresController {
   }
 
   @Get(':slug/serie')
-  @Header('Cache-Control', CACHE)
   @ApiOperation({
     summary: 'Serie histórica de un indicador',
     description:
