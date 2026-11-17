@@ -242,7 +242,7 @@ CREATE TABLE revision (
 CREATE INDEX revision_indicador_fecha_idx ON revision (indicador_id, fecha);
 ```
 
-`db/migrations/002_permisos.sql` (los roles `etl_writer` y `api_reader` ya existen: en Neon se crean desde la consola y en local con `db/local/init-roles.sh`):
+`db/migrations/002_permisos.sql` (los roles `etl_writer` y `api_reader` ya existen: en Neon se crean con SQL (no desde la consola, que les da privilegios de más) y en local con `db/local/init-roles.sh`):
 
 ```sql
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
@@ -507,7 +507,7 @@ Módulos `config`, `db`, `indicadores`, `salud` y `comun` según la sección 8.2
 **PAUSA.** Frander:
 1. Crea en Neon el proyecto `indicadores-cr` (Postgres 17, región `aws-us-east-1` o la más cercana disponible) y la base `indicadores`.
 2. En Settings → Compute, fija el autoscaling en 0.25 CU como mínimo y como máximo, con suspensión a los 5 minutos.
-3. En Roles, crea `etl_writer` y `api_reader` y guarda sus contraseñas en su gestor de contraseñas.
+3. En el SQL Editor, crea `etl_writer` y `api_reader` con `CREATE ROLE ... LOGIN PASSWORD` (no desde la pestaña Roles: la consola les da membresía en `neon_superuser` y los atributos CREATEROLE, CREATEDB y BYPASSRLS) y guarda sus contraseñas en su gestor de contraseñas. Verificá en `pg_roles` que `rolcreaterole`, `rolcreatedb` y `rolbypassrls` den `false` y que no sean miembros de ningún otro rol.
 4. En GitHub → Settings → Secrets and variables → Actions, crea los secrets `BCCR_TOKEN`, `DATABASE_URL_ADMIN`, `DATABASE_URL_ETL` y `DATABASE_URL_API`.
 
 Después escribí `migrar.yml` (`workflow_dispatch`, corre `migrar`) y `etl-backfill.yml` (`workflow_dispatch` con el input `desde`, corre `backfill` y después `validar`).
