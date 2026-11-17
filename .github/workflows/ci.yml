@@ -1,0 +1,159 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # CI nunca llama al BCCR real y no recibe BCCR_TOKEN.
+  BCCR_MODO: simulado
+
+jobs:
+  secretos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+
+  etl:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.12-alpine
+        env:
+          POSTGRES_USER: indicadores_owner
+          POSTGRES_PASSWORD: ci_owner_local
+          POSTGRES_DB: indicadores
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U indicadores_owner -d indicadores"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/preparar-base
+      - name: Lint y formato
+        working-directory: etl
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Validar contra los fixtures
+        working-directory: etl
+        run: python -m etl validar
+      - name: Pruebas (unitarias y de datos)
+        working-directory: etl
+        run: pytest tests -q
+
+  api:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.12-alpine
+        env:
+          POSTGRES_USER: indicadores_owner
+          POSTGRES_PASSWORD: ci_owner_local
+          POSTGRES_DB: indicadores
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U indicadores_owner -d indicadores"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/preparar-base
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.18.0"
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - name: Instalar dependencias
+        working-directory: api
+        run: npm ci
+      - name: Lint
+        working-directory: api
+        run: npx eslint "{src,test}/**/*.ts"
+      - name: Build
+        working-directory: api
+        run: npm run build
+      - name: Pruebas unitarias
+        working-directory: api
+        run: npm test
+      - name: Pruebas e2e
+        working-directory: api
+        env:
+          CORS_ORIGENES: http://localhost:3000
+          THROTTLE_LIMIT: "60"
+          THROTTLE_TTL_MS: "60000"
+        run: npm run test:e2e
+
+  web:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.12-alpine
+        env:
+          POSTGRES_USER: indicadores_owner
+          POSTGRES_PASSWORD: ci_owner_local
+          POSTGRES_DB: indicadores
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U indicadores_owner -d indicadores"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/preparar-base
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.18.0"
+          cache: npm
+          cache-dependency-path: |
+            api/package-lock.json
+            web/package-lock.json
+      - name: Compilar y levantar la API
+        working-directory: api
+        env:
+          PORT: "3001"
+          CORS_ORIGENES: http://localhost:3000
+          THROTTLE_LIMIT: "1000"
+          THROTTLE_TTL_MS: "60000"
+        run: |
+          npm ci
+          npm run build
+          nohup node dist/main > ../api.log 2>&1 &
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:3001/salud/vivo && exit 0
+            sleep 1
+          done
+          echo "La API no arrancó"; cat ../api.log; exit 1
+      - name: Instalar dependencias del web
+        working-directory: web
+        run: npm ci
+      - name: Lint
+        working-directory: web
+        run: npm run lint
+      - name: Build
+        working-directory: web
+        env:
+          API_URL: http://127.0.0.1:3001
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:3001
+        run: npm run build
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Imagen de la API
+        run: docker build --tag pipeline-api:ci api
+      - name: Imagen del ETL
+        run: docker build --tag pipeline-etl:ci etl
+      - name: El ETL arranca
+        run: docker run --rm pipeline-etl:ci --help

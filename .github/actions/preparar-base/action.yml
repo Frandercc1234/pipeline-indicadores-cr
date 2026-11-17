@@ -1,0 +1,49 @@
+name: Preparar base de pruebas
+description: >-
+  Crea los roles etl_writer y api_reader en el Postgres del servicio, aplica las migraciones y
+  carga los fixtures en modo simulado. Nunca usa BCCR_TOKEN ni llama al BCCR.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12.10"
+        cache: pip
+        cache-dependency-path: etl/requirements*.txt
+
+    - name: Instalar dependencias del ETL
+      shell: bash
+      run: pip install -r etl/requirements.txt -r etl/requirements-dev.txt
+
+    - name: Crear roles, migrar y cargar fixtures
+      shell: bash
+      working-directory: etl
+      env:
+        # El Postgres del servicio es efímero y solo existe dentro del runner.
+        PGHOST: 127.0.0.1
+        PGPORT: "5432"
+        PGPASSWORD: ci_owner_local
+        POSTGRES_USER: indicadores_owner
+        POSTGRES_DB: indicadores
+        BCCR_MODO: simulado
+      run: |
+        set -euo pipefail
+        ETL_DB_PASSWORD="$(openssl rand -hex 16)"
+        API_DB_PASSWORD="$(openssl rand -hex 16)"
+        echo "::add-mask::$ETL_DB_PASSWORD"
+        echo "::add-mask::$API_DB_PASSWORD"
+        export ETL_DB_PASSWORD API_DB_PASSWORD
+        sh ../db/local/init-roles.sh
+
+        base="127.0.0.1:5432/indicadores"
+        {
+          echo "DATABASE_URL_ADMIN=postgresql://indicadores_owner:ci_owner_local@${base}"
+          echo "DATABASE_URL_ETL=postgresql://etl_writer:${ETL_DB_PASSWORD}@${base}"
+          echo "DATABASE_URL_API=postgresql://api_reader:${API_DB_PASSWORD}@${base}"
+        } >> "$GITHUB_ENV"
+
+        export DATABASE_URL_ADMIN="postgresql://indicadores_owner:ci_owner_local@${base}"
+        export DATABASE_URL_ETL="postgresql://etl_writer:${ETL_DB_PASSWORD}@${base}"
+        python -m etl migrar
+        python -m etl backfill --desde 2024-01-01 --hasta 2024-06-30

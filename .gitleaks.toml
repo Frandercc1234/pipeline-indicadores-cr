@@ -1,0 +1,12 @@
+# Reglas por defecto de gitleaks más dos falsos positivos revisados a mano.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Falsos positivos verificados: no son secretos"
+paths = [
+  # El README de la plantilla de NestJS trae un token de ejemplo (?token=abc123def456) en un badge.
+  '''^api/README\.md$''',
+  # Ejemplo de la skill de Playwright con un token de mentira (mockToken = 'test-verification-...').
+  '''^\.claude/skills/playwright-best-practices/advanced/authentication-flows\.md$''',
+]
