@@ -22,6 +22,7 @@ Resueltas el 2026-11-16 (paso 1). Ninguna se actualiza sin pasar CI y las prueba
 | pytest | 8.4.2 |
 | respx | 0.22.0 |
 | ruff | 0.17.5 |
+| openpyxl | 3.1.5 |
 
 ## api (package.json)
 
