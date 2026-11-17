@@ -29,7 +29,8 @@ export class SerieQueryDto {
 
   @ApiPropertyOptional({
     example: '2024-06-30',
-    description: 'Fecha final (YYYY-MM-DD). Por defecto, hoy.',
+    description:
+      'Fecha final (YYYY-MM-DD). Por defecto, la última fecha disponible del indicador.',
   })
   @IsOptional()
   @Matches(SOLO_FECHA, { message: 'hasta debe tener el formato YYYY-MM-DD' })

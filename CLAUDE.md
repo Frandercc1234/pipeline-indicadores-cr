@@ -359,7 +359,7 @@ Base: `https://<servicio>.onrender.com`. Todas las rutas son `GET`. Los datos se
 |---|---|---|---|
 | `/indicadores` | n/a | `[{ slug, codigoBccr, nombre, unidad, periodicidad, ultimo: { fecha, valor } \| null, anterior: { fecha, valor } \| null }]`, solo los activos y ordenados por `id` | 429, 500 |
 | `/indicadores/:slug` | `slug` | Un objeto igual a un elemento de la lista anterior | 400 slug inválido, 404 no existe, 429 |
-| `/indicadores/:slug/serie` | `desde?`, `hasta?` (`YYYY-MM-DD`). Por defecto, `desde = 2015-01-01` y `hasta = hoy` | `{ slug, nombre, unidad, desde, hasta, datos: [{ fecha, valor }] }`, ordenados por fecha ascendente. `datos` puede venir vacío. | 400 fechas inválidas o `desde > hasta`, 404, 429 |
+| `/indicadores/:slug/serie` | `desde?`, `hasta?` (`YYYY-MM-DD`). Por defecto, `desde = 2015-01-01` y `hasta` = la última fecha disponible del indicador (puede ser posterior a hoy y coincide con `ultimo`) | `{ slug, nombre, unidad, desde, hasta, datos: [{ fecha, valor }] }`, ordenados por fecha ascendente. `datos` puede venir vacío. | 400 fechas inválidas o `desde > hasta`, 404, 429 |
 | `/salud` | n/a | `{ estado: "ok", base: "ok", ultimaCarga: { tipo, fin, estado }, horasDesdeUltimaCarga }` | 503 con `estado: "degradado"` si la base no responde o la última carga `diaria` en estado `ok` tiene más de 36 h |
 | `/salud/vivo` | n/a | `{ estado: "vivo", version: RENDER_GIT_COMMIT \|\| "local" }`. No toca la base. | n/a |
 | `/docs` y `/docs-json` | n/a | Swagger UI y especificación OpenAPI. Título: "API de indicadores económicos de Costa Rica". | n/a |

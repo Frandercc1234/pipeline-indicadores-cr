@@ -169,11 +169,34 @@ describe('API de indicadores (e2e)', () => {
       expect(fechas).toEqual([...fechas].sort());
     });
 
-    it('sin parámetros usa desde 2015-01-01 y hasta hoy', async () => {
+    it('sin parámetros usa desde 2015-01-01', async () => {
       const { body } = await pedir('/indicadores/tpm/serie');
       expect((body as { desde: string }).desde).toBe('2015-01-01');
-      expect((body as { hasta: string }).hasta).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
+
+    it.each(SLUGS)(
+      'sin hasta, el último dato de la serie de %s coincide con "ultimo" de /indicadores',
+      async (slug) => {
+        const lista = (await pedir('/indicadores')).body as {
+          slug: string;
+          ultimo: { fecha: string; valor: number };
+        }[];
+        const ultimo = lista.find((i) => i.slug === slug)!.ultimo;
+        const { status, body } = await pedir(`/indicadores/${slug}/serie`);
+        expect(status).toBe(200);
+        const serie = body as {
+          hasta: string;
+          datos: { fecha: string; valor: number }[];
+        };
+        expect(serie.datos.at(-1)).toEqual(ultimo);
+        expect(serie.hasta).toBe(ultimo.fecha);
+        // y coincide con el detalle del indicador
+        const detalle = (await pedir(`/indicadores/${slug}`)).body as {
+          ultimo: unknown;
+        };
+        expect(detalle.ultimo).toEqual(ultimo);
+      },
+    );
 
     it('un rango sin datos devuelve datos vacío', async () => {
       const { status, body } = await pedir('/indicadores/ipc_indice/serie', {

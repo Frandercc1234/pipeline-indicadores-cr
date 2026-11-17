@@ -3,6 +3,7 @@ import {
   type FilaIndicador,
   IndicadoresRepository,
 } from './indicadores.repository';
+import { hoyCostaRica } from '../comun/fechas';
 import { IndicadoresService } from './indicadores.service';
 
 // Valores reales de tc_venta (BCCR, código 318), tal como los entrega pg: numeric como texto.
@@ -131,11 +132,58 @@ describe('IndicadoresService', () => {
       );
     });
 
-    it('por defecto va desde 2015-01-01 hasta hoy', async () => {
+    it('sin hasta llega hasta la última fecha disponible del indicador', async () => {
       repositorio.serie.mockResolvedValue([]);
       const serie = await servicio.serie('tc_venta');
       expect(serie.desde).toBe('2015-01-01');
-      expect(serie.hasta).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(serie.hasta).toBe(FILA.ultimo_fecha);
+      expect(repositorio.serie).toHaveBeenCalledWith(
+        2,
+        '2015-01-01',
+        FILA.ultimo_fecha,
+      );
+    });
+
+    it('sin hasta no corta en hoy: una última fecha futura se incluye', async () => {
+      repositorio.buscarPorSlug.mockResolvedValue({
+        ...FILA,
+        ultimo_fecha: '2999-01-02',
+      });
+      repositorio.serie.mockResolvedValue([]);
+      expect((await servicio.serie('tc_venta')).hasta).toBe('2999-01-02');
+    });
+
+    it('sin hasta y sin datos usa la fecha de hoy', async () => {
+      repositorio.buscarPorSlug.mockResolvedValue({
+        ...FILA,
+        ultimo_fecha: null,
+        ultimo_valor: null,
+      });
+      repositorio.serie.mockResolvedValue([]);
+      expect((await servicio.serie('tc_venta')).hasta).toBe(hoyCostaRica());
+    });
+
+    it('un desde posterior a la última fecha, sin hasta, devuelve la serie vacía (no es un 400)', async () => {
+      repositorio.serie.mockResolvedValue([]);
+      const serie = await servicio.serie('tc_venta', '2030-01-01');
+      expect(serie.desde).toBe('2030-01-01');
+      expect(serie.hasta).toBe('2030-01-01');
+      expect(serie.datos).toEqual([]);
+    });
+
+    it('con hasta explícito lo respeta aunque haya datos posteriores', async () => {
+      repositorio.serie.mockResolvedValue([]);
+      const serie = await servicio.serie(
+        'tc_venta',
+        '2024-01-01',
+        '2024-01-31',
+      );
+      expect(serie.hasta).toBe('2024-01-31');
+      expect(repositorio.serie).toHaveBeenCalledWith(
+        2,
+        '2024-01-01',
+        '2024-01-31',
+      );
     });
 
     it('datos puede venir vacío', async () => {

@@ -44,20 +44,27 @@ export class IndicadoresService {
     return aIndicador(await this.buscar(slug));
   }
 
+  /**
+   * Si no viene `hasta`, la serie llega hasta la última fecha disponible del indicador
+   * (la misma que `ultimo` en /indicadores), aunque sea posterior a hoy.
+   */
   async serie(
     slug: string,
     desde: string = FECHA_MINIMA,
-    hasta: string = hoyCostaRica(),
+    hastaPedida?: string,
   ): Promise<SerieDto> {
     if (desde < FECHA_MINIMA) {
       throw new BadRequestException(
         `desde no puede ser anterior a ${FECHA_MINIMA}`,
       );
     }
-    if (desde > hasta) {
+    if (hastaPedida !== undefined && desde > hastaPedida) {
       throw new BadRequestException('desde no puede ser posterior a hasta');
     }
     const fila = await this.buscar(slug);
+    const ultima = fila.ultimo_fecha ?? hoyCostaRica();
+    // Un desde posterior a la última fecha no es un error: la serie sale vacía.
+    const hasta = hastaPedida ?? (ultima < desde ? desde : ultima);
     const datos = await this.repositorio.serie(fila.id, desde, hasta);
     return {
       slug: fila.slug,

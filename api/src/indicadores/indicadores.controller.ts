@@ -62,7 +62,8 @@ export class IndicadoresController {
     summary: 'Serie histórica de un indicador',
     description:
       'Observaciones entre `desde` y `hasta` (ambas incluidas), ordenadas por fecha ascendente. ' +
-      'Por defecto, desde 2015-01-01 hasta hoy (hora de Costa Rica).',
+      'Por defecto, desde 2015-01-01 hasta la última fecha disponible del indicador, que puede ser ' +
+      'posterior a hoy (por ejemplo la TBP) y coincide con `ultimo` de `/indicadores`.',
   })
   @ApiOkResponse({
     type: SerieDto,
