@@ -9,11 +9,22 @@ from etl.validaciones import (
     FECHA_MINIMA,
     Indicador,
     detectar_huecos,
+    fecha_limite,
     hoy_cr,
     validar_lote,
 )
 
 HOY = date(2026, 11, 16)
+UN_DIA = timedelta(days=1)
+# Adelanto de publicación de cada indicador, tal como lo define indicadores.yaml.
+ADELANTOS = {
+    "tc_compra": 1,
+    "tc_venta": 1,
+    "tbp": 10,
+    "tpm": 0,
+    "ipc_indice": 0,
+    "ipc_interanual": 0,
+}
 
 
 def _indicador(slug: str) -> Indicador:
@@ -27,7 +38,12 @@ def _indicador(slug: str) -> Indicador:
         periodicidad=datos["periodicidad"],
         valor_min=datos["valor_min"],
         valor_max=datos["valor_max"],
+        dias_adelanto=datos["dias_adelanto"],
     )
+
+
+def _medio_de(indicador: Indicador) -> float:
+    return (indicador.valor_min + indicador.valor_max) / 2
 
 
 @pytest.fixture
@@ -73,11 +89,55 @@ def test_fecha_anterior_a_2015_se_descarta(tc, medio):
     assert resultado.rechazadas[0]["motivo"] == "fecha_fuera_de_rango"
 
 
-def test_acepta_hasta_hoy_mas_dos_dias_y_rechaza_hoy_mas_tres(tc, medio):
-    filas = [Fila(HOY + timedelta(days=n), medio) for n in (0, 2, 3)]
-    resultado = validar_lote(tc, filas, HOY)
-    assert [f.fecha for f in resultado.validas] == [HOY, HOY + timedelta(days=2)]
-    assert resultado.rechazadas[0]["fecha"] == (HOY + timedelta(days=3)).isoformat()
+def test_el_yaml_define_el_adelanto_de_cada_indicador():
+    assert {slug: _indicador(slug).dias_adelanto for slug in ADELANTOS} == ADELANTOS
+
+
+def test_tbp_acepta_una_fecha_9_dias_adelante():
+    tbp = _indicador("tbp")
+    fila = Fila(HOY + timedelta(days=9), _medio_de(tbp))
+    resultado = validar_lote(tbp, [fila], HOY)
+    assert resultado.validas == [fila]
+    assert resultado.rechazadas == []
+
+
+def test_tc_rechaza_una_fecha_2_dias_adelante(tc, medio):
+    manana, pasado = HOY + UN_DIA, HOY + 2 * UN_DIA
+    resultado = validar_lote(tc, [Fila(manana, medio), Fila(pasado, medio)], HOY)
+    assert [f.fecha for f in resultado.validas] == [manana]
+    assert resultado.rechazadas == [
+        {"fecha": pasado.isoformat(), "valor": medio, "motivo": "fecha_fuera_de_rango"}
+    ]
+
+
+@pytest.mark.parametrize("slug", list(ADELANTOS))
+def test_el_limite_es_hoy_mas_el_adelanto_de_cada_indicador(slug):
+    indicador = _indicador(slug)
+    medio = _medio_de(indicador)
+    limite = HOY + timedelta(days=ADELANTOS[slug])
+    assert fecha_limite(indicador, HOY) == limite
+    resultado = validar_lote(indicador, [Fila(limite, medio), Fila(limite + UN_DIA, medio)], HOY)
+    assert [f.fecha for f in resultado.validas] == [limite]
+    assert resultado.rechazadas[0]["motivo"] == "fecha_fuera_de_rango"
+
+
+def test_a_las_2040_en_costa_rica_el_limite_usa_la_fecha_de_costa_rica():
+    # 20:40 del 16 de noviembre en Costa Rica son las 02:40 UTC del 17.
+    ahora = datetime(2026, 11, 17, 2, 40, tzinfo=timezone.utc)
+    hoy = hoy_cr(ahora)
+    assert hoy == date(2026, 11, 16)
+    assert hoy != ahora.date()
+
+    tc, tbp = _indicador("tc_compra"), _indicador("tbp")
+    filas_tc = [Fila(date(2026, 11, 17), _medio_de(tc)), Fila(date(2026, 11, 18), _medio_de(tc))]
+    # El TC llega hasta mañana en Costa Rica (17). El 18 se rechaza.
+    assert [f.fecha for f in validar_lote(tc, filas_tc, hoy).validas] == [date(2026, 11, 17)]
+    # Si "hoy" se hubiera tomado en UTC (17 de noviembre), el 18 habría pasado: ese es el error.
+    assert len(validar_lote(tc, filas_tc[1:], ahora.date()).validas) == 1
+
+    filas_tbp = [Fila(date(2026, 11, 26), _medio_de(tbp)), Fila(date(2026, 11, 27), _medio_de(tbp))]
+    # La TBP llega hasta 10 días después de hoy: el 26 pasa y el 27 se rechaza.
+    assert [f.fecha for f in validar_lote(tbp, filas_tbp, hoy).validas] == [date(2026, 11, 26)]
 
 
 def test_fechas_duplicadas_descartan_el_lote_completo(tc, medio):

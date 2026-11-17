@@ -8,8 +8,6 @@ from datetime import date, datetime, timedelta, timezone
 from etl.parser import Fila
 
 FECHA_MINIMA = date(2015, 1, 1)
-# La TBP se publica con 2 días de adelanto (ver sección 15 del blueprint).
-ADELANTO_MAXIMO_DIAS = 2
 # Costa Rica es UTC-6 todo el año (no usa horario de verano).
 ZONA_COSTA_RICA = timezone(timedelta(hours=-6))
 # Días seguidos sin dato a partir de los cuales se avisa de un hueco.
@@ -24,6 +22,8 @@ class Indicador:
     periodicidad: str
     valor_min: float
     valor_max: float
+    # Días por delante de "hoy" con los que el BCCR publica este indicador.
+    dias_adelanto: int
 
 
 @dataclass
@@ -36,6 +36,11 @@ def hoy_cr(ahora: datetime | None = None) -> date:
     """Fecha de hoy en Costa Rica."""
     ahora = ahora or datetime.now(timezone.utc)
     return ahora.astimezone(ZONA_COSTA_RICA).date()
+
+
+def fecha_limite(indicador: Indicador, hoy: date) -> date:
+    """Última fecha aceptada: hoy (hora de Costa Rica) más el adelanto del indicador."""
+    return hoy + timedelta(days=indicador.dias_adelanto)
 
 
 def _es_numero(valor) -> bool:
@@ -62,7 +67,7 @@ def validar_lote(indicador: Indicador, filas: list[Fila], hoy: date) -> Resultad
     if repetidas:
         motivo = {"motivo": "fechas_duplicadas", "fechas": [f.isoformat() for f in repetidas]}
         return Resultado(rechazadas=[motivo])
-    limite = hoy + timedelta(days=ADELANTO_MAXIMO_DIAS)
+    limite = fecha_limite(indicador, hoy)
     resultado = Resultado()
     for fila in filas:
         motivo = _motivo_rechazo(indicador, fila, limite)

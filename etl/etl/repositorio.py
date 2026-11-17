@@ -34,11 +34,11 @@ def a_decimal(valor: float) -> Decimal:
 
 def listar_indicadores(conn: psycopg.Connection, slug: str | None = None) -> list[Indicador]:
     consulta = (
-        "SELECT id, slug, codigo_bccr, periodicidad, valor_min, valor_max "
+        "SELECT id, slug, codigo_bccr, periodicidad, valor_min, valor_max, dias_adelanto "
         "FROM indicador WHERE activo AND (%s::text IS NULL OR slug = %s) ORDER BY id"
     )
     filas = conn.execute(consulta, (slug, slug)).fetchall()
-    return [Indicador(i, s, c, p, float(mn), float(mx)) for i, s, c, p, mn, mx in filas]
+    return [Indicador(i, s, c, p, float(mn), float(mx), a) for i, s, c, p, mn, mx, a in filas]
 
 
 def crear_carga(conn: psycopg.Connection, tipo: str, modo: str) -> int:

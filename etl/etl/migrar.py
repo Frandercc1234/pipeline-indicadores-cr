@@ -8,16 +8,18 @@ from etl.config import CARPETA_ETL, RAIZ_REPO, registrar, requerir
 MIGRACIONES = RAIZ_REPO / "db" / "migrations"
 
 UPSERT_INDICADOR = """
-INSERT INTO indicador (slug, codigo_bccr, nombre, unidad, periodicidad, valor_min, valor_max)
+INSERT INTO indicador
+  (slug, codigo_bccr, nombre, unidad, periodicidad, valor_min, valor_max, dias_adelanto)
 VALUES (%(slug)s, %(codigo_bccr)s, %(nombre)s, %(unidad)s, %(periodicidad)s,
-        %(valor_min)s, %(valor_max)s)
+        %(valor_min)s, %(valor_max)s, %(dias_adelanto)s)
 ON CONFLICT (slug) DO UPDATE SET
   codigo_bccr = EXCLUDED.codigo_bccr,
   nombre = EXCLUDED.nombre,
   unidad = EXCLUDED.unidad,
   periodicidad = EXCLUDED.periodicidad,
   valor_min = EXCLUDED.valor_min,
-  valor_max = EXCLUDED.valor_max
+  valor_max = EXCLUDED.valor_max,
+  dias_adelanto = EXCLUDED.dias_adelanto
 """
 
 

@@ -7,7 +7,7 @@ Nunca imprime el token ni los headers.
 import io
 import json
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
@@ -81,7 +81,7 @@ def main() -> None:
     }
     with httpx.Client(headers=cabeceras) as cliente:
         print("== 1. Estructura de la serie (317 y 318, últimos 7 días)")
-        hoy = date.today()
+        hoy = datetime.now(timezone(timedelta(hours=-6))).date()  # hora de Costa Rica
         for codigo in (317, 318):
             r = pedir(
                 cliente,

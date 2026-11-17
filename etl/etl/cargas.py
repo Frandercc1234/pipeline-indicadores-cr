@@ -23,8 +23,8 @@ from etl.repositorio import (
 )
 from etl.simulado import ClienteSimulado
 from etl.validaciones import (
-    ADELANTO_MAXIMO_DIAS,
     detectar_huecos,
+    fecha_limite,
     hoy_cr,
     validar_lote,
 )
@@ -71,8 +71,12 @@ def _texto_error(error: Exception) -> str:
     return f"{type(error).__name__}: {str(error)[:300]}"
 
 
-def _cargar(tipo: str, desde: date, hasta: date, hoy: date, slug: str | None = None) -> int:
-    """Pide, valida y guarda las series. Códigos de salida: 0 ok, 1 error, 2 parcial."""
+def _cargar(tipo: str, desde: date, hasta: date | None, hoy: date, slug: str | None = None) -> int:
+    """Pide, valida y guarda las series. Códigos de salida: 0 ok, 1 error, 2 parcial.
+
+    Si `hasta` es None, cada indicador se pide hasta hoy más su adelanto de publicación.
+    `hoy` es siempre la fecha de Costa Rica.
+    """
     with sesion() as (modo, cliente, conn):
         indicadores = listar_indicadores(conn, slug)
         if not indicadores:
@@ -86,7 +90,12 @@ def _cargar(tipo: str, desde: date, hasta: date, hoy: date, slug: str | None = N
             for indicador in indicadores:
                 inicio = perf_counter()
                 try:
-                    filas = cliente.serie(indicador.slug, indicador.codigo_bccr, desde, hasta)
+                    filas = cliente.serie(
+                        indicador.slug,
+                        indicador.codigo_bccr,
+                        desde,
+                        hasta or fecha_limite(indicador, hoy),
+                    )
                 except (ErrorBccr, ErrorParseo) as error:
                     hubo_error = True
                     detalle["indicadores"][indicador.slug] = {"error": str(error)}
@@ -150,7 +159,7 @@ def diario(hoy: date | None = None) -> int:
     """Pide los últimos 60 días para recoger publicaciones nuevas y correcciones."""
     hoy = hoy or hoy_cr()
     desde = hoy - timedelta(days=DIAS_VENTANA_DIARIA)
-    return _cargar("diaria", desde, hoy + timedelta(days=ADELANTO_MAXIMO_DIAS), hoy)
+    return _cargar("diaria", desde, None, hoy)
 
 
 def validar(muestras: int = 15, azar: random.Random | None = None) -> int:

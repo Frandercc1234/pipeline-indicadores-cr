@@ -115,7 +115,7 @@ pipeline-indicadores-cr/
 │   ├── diseno/                # Enlace a Figma, tokens.json y capturas aprobadas
 │   └── validacion-manual.md   # Comparación manual contra sdd.bccr.fi.cr (paso 6)
 ├── db/
-│   ├── migrations/            # SQL versionado: 001_esquema.sql, 002_permisos.sql
+│   ├── migrations/            # SQL versionado: 001_esquema.sql, 002_permisos.sql, 003_dias_adelanto.sql
 │   └── local/                 # init-roles.sh: crea etl_writer y api_reader en el Postgres local
 ├── etl/
 │   ├── pyproject.toml         # Config de ruff y pytest
@@ -256,6 +256,13 @@ GRANT SELECT, INSERT ON revision TO etl_writer;
 GRANT USAGE, SELECT ON SEQUENCE carga_id_seq, revision_id_seq TO etl_writer;
 ```
 
+`db/migrations/003_dias_adelanto.sql` (los días por delante de "hoy" con los que el BCCR publica cada indicador):
+
+```sql
+ALTER TABLE indicador
+  ADD COLUMN dias_adelanto smallint NOT NULL DEFAULT 0 CHECK (dias_adelanto >= 0);
+```
+
 **Siembra de `indicador`.** `python -m etl migrar` aplica los SQL pendientes en orden y registra cada uno en `schema_migraciones`. Después hace un upsert de `indicador` desde `etl/indicadores.yaml` usando `slug` como clave. Formato del YAML:
 
 ```yaml
@@ -266,6 +273,7 @@ GRANT USAGE, SELECT ON SEQUENCE carga_id_seq, revision_id_seq TO etl_writer;
   periodicidad: diaria
   valor_min: 400
   valor_max: 800
+  dias_adelanto: 1
 - slug: tc_venta
   codigo_bccr: 318
   nombre: Tipo de cambio de referencia, venta
@@ -273,9 +281,11 @@ GRANT USAGE, SELECT ON SEQUENCE carga_id_seq, revision_id_seq TO etl_writer;
   periodicidad: diaria
   valor_min: 400
   valor_max: 800
+  dias_adelanto: 1
 # ipc_indice (índice, valor_min 70, valor_max 150), ipc_interanual (porcentaje, -5 a 30),
 # tbp (porcentaje, 0 a 20) y tpm (porcentaje, 0 a 15): el paso 2 completa código, nombre
-# oficial y periodicidad a partir del catálogo del BCCR.
+# oficial y periodicidad a partir del catálogo del BCCR. dias_adelanto: tc_compra 1,
+# tc_venta 1, tbp 10, tpm 0, ipc_indice 0 e ipc_interanual 0.
 ```
 
 ---
@@ -317,7 +327,7 @@ Variables comunes: `BCCR_MODO` (`real` | `simulado`), `BCCR_TOKEN`, `BCCR_BASE_U
 |---|---|
 | `valor` no nulo y numérico | La fila se descarta y se anota en `carga.detalle.rechazadas` |
 | `valor` dentro de `[valor_min, valor_max]` del indicador | Se descarta y se anota |
-| `fecha >= 2015-01-01` y `fecha <= hoy + 2 días` (hora de Costa Rica; la TBP se publica con 2 días de adelanto) | Se descarta y se anota |
+| `fecha >= 2015-01-01` y `fecha <= hoy_cr + dias_adelanto` del indicador (`hoy_cr` es la fecha en Costa Rica, UTC-6; nunca se usa la fecha UTC) | Se descarta y se anota |
 | Sin fechas duplicadas en el mismo lote | Se descarta el lote completo del indicador y se anota |
 
 Si hay al menos una fila rechazada, la carga queda en `parcial` y el comando sale con código 2. **Nunca se rellenan huecos.** Si el BCCR no publicó una fecha, esa fecha no existe en la base.
@@ -336,7 +346,7 @@ Los huecos se revisan en `validar` como advertencia: más de 4 días seguidos si
 |---|---|---|
 | `migrar` | Usa `DATABASE_URL_ADMIN`. Aplica las migraciones pendientes y siembra `indicador`. | 0 ok, 1 error |
 | `backfill --desde 2015-01-01 [--hasta HOY] [--slug X]` | Carga por tramos anuales. Registra una `carga` tipo `backfill`. Es idempotente. | 0 ok, 1 error, 2 parcial |
-| `diario` | Pide los últimos 60 días de cada indicador activo para recoger publicaciones nuevas y correcciones. Registra una `carga` tipo `diaria`. | 0, 1, 2 |
+| `diario` | Pide los últimos 60 días de cada indicador activo, hasta hoy más su `dias_adelanto`, para recoger publicaciones nuevas y correcciones. Registra una `carga` tipo `diaria`. | 0, 1, 2 |
 | `validar [--muestras 15]` | Por indicador, elige las 5 fechas más recientes y 10 al azar de los últimos 2 años. Las vuelve a pedir al BCCR (o a los fixtures en simulado) y compara con tolerancia de `0.0001`. Revisa huecos. Registra una `carga` tipo `validacion`. | 0 todo coincide, 1 hay diferencias o error |
 
 Toda corrida escribe logs en JSON a stdout (`nivel`, `evento`, `slug`, `filas` y `duracion_ms`), sin el token.
@@ -613,7 +623,7 @@ Agregá el job `e2e` a `ci.yml`: levanta db y api con compose, carga datos simul
 - Neon Free da 100 CU-horas al mes por proyecto y 1 GB. Con 6 indicadores desde 2015 (unas 12.000 filas) el almacenamiento queda muy por debajo.
 - Las versiones mayores de la sección 4 eran las estables al escribir este documento. El paso 1 confirma y fija las exactas.
 - El IPC cambia de base cada pocos años (2006, 2015, diciembre 2020, junio 2026). Cada base es un código distinto del BCCR y recalcula toda la historia. El proyecto usa la base junio 2026 (98404 y 98407). Si el BCCR publica una base nueva, hay que cambiar el código en `indicadores.yaml` y volver a correr el backfill de esos dos indicadores.
-- La TBP (423) trae valores con 2 días de adelanto, por eso la validación acepta fechas hasta hoy + 2 días.
+- Cada indicador se publica con un adelanto distinto respecto de "hoy" en Costa Rica (columna `dias_adelanto`): tipos de cambio 1 día, TBP 10 días y el resto 0. Una fecha más allá de ese límite se rechaza y la carga queda en `parcial`.
 
 **Riesgos y mitigación**
 
