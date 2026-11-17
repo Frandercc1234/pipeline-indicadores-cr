@@ -13,7 +13,7 @@ env:
 
 jobs:
   secretos:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,7 +24,7 @@ jobs:
           GITLEAKS_ENABLE_COMMENTS: "false"
 
   etl:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:17.12-alpine
@@ -53,7 +53,7 @@ jobs:
         run: pytest tests -q
 
   api:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:17.12-alpine
@@ -95,7 +95,7 @@ jobs:
         run: npm run test:e2e
 
   web:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:17.12-alpine
@@ -148,7 +148,7 @@ jobs:
         run: npm run build
 
   docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Imagen de la API
