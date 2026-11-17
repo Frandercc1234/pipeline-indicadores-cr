@@ -1,0 +1,36 @@
+{
+  "estado": true,
+  "mensaje": "Consulta exitosa",
+  "datos": [
+    {
+      "codigoIndicador": "98404",
+      "nombreIndicador": "Indice de Precios al Consumidor (IPC), (Junio 2026 = 100)",
+      "series": [
+        {
+          "fecha": "2024-01-31",
+          "valorDatoPorPeriodo": 100.37400996
+        },
+        {
+          "fecha": "2024-02-29",
+          "valorDatoPorPeriodo": 100.26591729
+        },
+        {
+          "fecha": "2024-03-31",
+          "valorDatoPorPeriodo": 99.98129068
+        },
+        {
+          "fecha": "2024-04-30",
+          "valorDatoPorPeriodo": 100.30868389
+        },
+        {
+          "fecha": "2024-05-31",
+          "valorDatoPorPeriodo": 100.39047458
+        },
+        {
+          "fecha": "2024-06-30",
+          "valorDatoPorPeriodo": 100.53568233
+        }
+      ]
+    }
+  ]
+}

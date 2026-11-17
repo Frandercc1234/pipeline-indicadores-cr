@@ -1,0 +1,42 @@
+- slug: tc_compra
+  codigo_bccr: 317
+  nombre: Tipo de cambio de referencia, compra
+  unidad: colones por dólar
+  periodicidad: diaria
+  valor_min: 400
+  valor_max: 800
+- slug: tc_venta
+  codigo_bccr: 318
+  nombre: Tipo de cambio de referencia, venta
+  unidad: colones por dólar
+  periodicidad: diaria
+  valor_min: 400
+  valor_max: 800
+- slug: ipc_indice
+  codigo_bccr: 98404
+  nombre: Índice de precios al consumidor (IPC), base junio 2026 = 100
+  unidad: índice (junio 2026 = 100)
+  periodicidad: mensual
+  valor_min: 70
+  valor_max: 150
+- slug: ipc_interanual
+  codigo_bccr: 98407
+  nombre: Índice de precios al consumidor (IPC), variación interanual
+  unidad: porcentaje
+  periodicidad: mensual
+  valor_min: -5
+  valor_max: 30
+- slug: tbp
+  codigo_bccr: 423
+  nombre: Tasa básica pasiva calculada por el BCCR
+  unidad: porcentaje
+  periodicidad: diaria
+  valor_min: 0
+  valor_max: 20
+- slug: tpm
+  codigo_bccr: 3541
+  nombre: Tasa de política monetaria
+  unidad: porcentaje
+  periodicidad: diaria
+  valor_min: 0
+  valor_max: 15

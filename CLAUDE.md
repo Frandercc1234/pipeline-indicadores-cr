@@ -26,10 +26,10 @@ Este archivo es el `CLAUDE.md` del repo. Todo lo necesario para construir el pro
    |---|---|---|
    | `tc_compra` | Tipo de cambio de referencia, compra | 317 |
    | `tc_venta` | Tipo de cambio de referencia, venta | 318 |
-   | `ipc_indice` | Índice de precios al consumidor (nivel) | Se obtiene en el paso 2 |
-   | `ipc_interanual` | Variación interanual del IPC | Se obtiene en el paso 2 |
-   | `tbp` | Tasa básica pasiva | Se obtiene en el paso 2 |
-   | `tpm` | Tasa de política monetaria | Se obtiene en el paso 2 |
+   | `ipc_indice` | Índice de precios al consumidor (nivel), base junio 2026 = 100 | 98404 |
+   | `ipc_interanual` | Variación interanual del IPC | 98407 |
+   | `tbp` | Tasa básica pasiva (diaria) | 423 |
+   | `tpm` | Tasa de política monetaria | 3541 |
 
 2. Carga diaria a las 06:15 y a las 18:15 (hora de Costa Rica). Usa reintentos, registra cada corrida y abre un issue en GitHub si falla.
 3. Validación de los datos antes de guardar: rangos, fechas, duplicados y sin rellenar huecos. Después de guardar, se comparan los datos contra lo que publica el BCCR.
@@ -317,7 +317,7 @@ Variables comunes: `BCCR_MODO` (`real` | `simulado`), `BCCR_TOKEN`, `BCCR_BASE_U
 |---|---|
 | `valor` no nulo y numérico | La fila se descarta y se anota en `carga.detalle.rechazadas` |
 | `valor` dentro de `[valor_min, valor_max]` del indicador | Se descarta y se anota |
-| `fecha >= 2015-01-01` y `fecha <= hoy + 1 día` (hora de Costa Rica) | Se descarta y se anota |
+| `fecha >= 2015-01-01` y `fecha <= hoy + 2 días` (hora de Costa Rica; la TBP se publica con 2 días de adelanto) | Se descarta y se anota |
 | Sin fechas duplicadas en el mismo lote | Se descarta el lote completo del indicador y se anota |
 
 Si hay al menos una fila rechazada, la carga queda en `parcial` y el comando sale con código 2. **Nunca se rellenan huecos.** Si el BCCR no publicó una fecha, esa fecha no existe en la base.
@@ -457,7 +457,7 @@ Creá la estructura de la sección 5 (las carpetas vacías llevan `.gitkeep`), `
 
 Después escribí `etl/scripts/explorar_catalogo.py`:
 1. Pide la serie de 317 y 318 de los últimos 7 días e imprime la estructura del JSON (claves y tipos, no el token).
-2. Descarga el catálogo de indicadores (`/indicadoresEconomicos/descarga` o el endpoint de metadata que documente la API) y busca por nombre: IPC nivel, IPC variación interanual, tasa básica pasiva y tasa de política monetaria. Imprime los candidatos con código y nombre oficial.
+2. Descarga el catálogo de indicadores (`/indicadoresEconomicos/descargar?idioma=ES`, que devuelve un Excel (.xlsx)) y busca por nombre: IPC nivel, IPC variación interanual, tasa básica pasiva y tasa de política monetaria. Imprime los candidatos con código y nombre oficial.
 3. Para los 6 códigos elegidos, guarda en `etl/tests/fixtures/{slug}.json` la respuesta real de 2024-01-01 a 2024-06-30.
 
 Completá `etl/indicadores.yaml` con los 6 indicadores. **PAUSA:** Frander confirma los 4 códigos nuevos abriendo cada indicador en sdd.bccr.fi.cr y comparando el nombre y el último valor.
@@ -612,6 +612,8 @@ Agregá el job `e2e` a `ci.yml`: levanta db y api con compose, carga datos simul
 - El plan gratis de Render da 750 horas al mes y un servicio despierto todo el mes usa como máximo 744. Si Render cambia el plan, la API se dormiría: el dashboard sigue funcionando por ISR y solo la API directa tendría cold start.
 - Neon Free da 100 CU-horas al mes por proyecto y 1 GB. Con 6 indicadores desde 2015 (unas 12.000 filas) el almacenamiento queda muy por debajo.
 - Las versiones mayores de la sección 4 eran las estables al escribir este documento. El paso 1 confirma y fija las exactas.
+- El IPC cambia de base cada pocos años (2006, 2015, diciembre 2020, junio 2026). Cada base es un código distinto del BCCR y recalcula toda la historia. El proyecto usa la base junio 2026 (98404 y 98407). Si el BCCR publica una base nueva, hay que cambiar el código en `indicadores.yaml` y volver a correr el backfill de esos dos indicadores.
+- La TBP (423) trae valores con 2 días de adelanto, por eso la validación acepta fechas hasta hoy + 2 días.
 
 **Riesgos y mitigación**
 
