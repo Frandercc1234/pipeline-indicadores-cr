@@ -1,0 +1,123 @@
+name: Vigilancia
+
+# Los crons de GitHub pueden retrasarse; cada trabajo se elige por el cron que lo disparó.
+on:
+  schedule:
+    - cron: "*/10 * * * *" # latido: mantiene despierto a Render
+    - cron: "7 * * * *" # revisión horaria
+    - cron: "0 9 1 * *" # mensual: reactivar workflows
+  workflow_dispatch:
+    inputs:
+      trabajo:
+        description: Qué correr a mano
+        type: choice
+        options: [latido, hora, mensual]
+        default: hora
+
+permissions:
+  contents: read
+  issues: write
+  actions: write
+
+jobs:
+  latido:
+    if: ${{ github.event.schedule == '*/10 * * * *' || inputs.trabajo == 'latido' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      # /salud/vivo no toca la base: mantiene Render despierto sin gastar horas de Neon.
+      - name: Despertar la API
+        env:
+          URL_API: ${{ vars.URL_API }}
+        run: curl -fsS --max-time 90 --retry 2 --retry-delay 10 "$URL_API/salud/vivo"
+
+  hora:
+    if: ${{ github.event.schedule == '7 * * * *' || inputs.trabajo == 'hora' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      URL_API: ${{ vars.URL_API }}
+      URL_WEB: ${{ vars.URL_WEB }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: /salud debe dar 200
+        id: salud
+        continue-on-error: true
+        run: |
+          codigo=$(curl -s -o salud.json -w '%{http_code}' --max-time 90 --retry 2 --retry-delay 10 "$URL_API/salud")
+          cat salud.json; echo
+          [ "$codigo" = "200" ] || { echo "/salud devolvió $codigo"; exit 1; }
+
+      - name: Última corrida programada del ETL (máximo 18 h)
+        id: etl
+        continue-on-error: true
+        run: |
+          ultima=$(gh run list --workflow etl-diario.yml --event schedule --limit 1 --json createdAt --jq '.[0].createdAt // empty')
+          if [ -z "$ultima" ]; then echo "No hay corridas programadas de etl-diario.yml"; exit 1; fi
+          horas=$(( ( $(date +%s) - $(date -d "$ultima" +%s) ) / 3600 ))
+          echo "Última corrida programada: $ultima (hace $horas h)"
+          [ "$horas" -le 18 ] || { echo "Hace más de 18 h que no corre el ETL programado"; exit 1; }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.18.0"
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Instalar Playwright
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: api.spec.ts y dashboard.spec.ts contra producción
+        id: playwright
+        continue-on-error: true
+        working-directory: e2e
+        run: npx playwright test tests/api.spec.ts tests/dashboard.spec.ts
+
+      - name: Subir el reporte si falla
+        if: ${{ steps.playwright.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          retention-days: 7
+
+      - name: Abrir o comentar el issue "Producción degradada"
+        if: ${{ steps.salud.outcome == 'failure' || steps.etl.outcome == 'failure' || steps.playwright.outcome == 'failure' }}
+        env:
+          R_SALUD: ${{ steps.salud.outcome }}
+          R_ETL: ${{ steps.etl.outcome }}
+          R_PW: ${{ steps.playwright.outcome }}
+          URL_CORRIDA: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          cuerpo=$(printf 'Revisión horaria con problemas:\n\n- /salud: %s\n- Última corrida programada del ETL (máximo 18 h): %s\n- Playwright (api y dashboard): %s\n\nCorrida: %s\n' \
+            "$R_SALUD" "$R_ETL" "$R_PW" "$URL_CORRIDA")
+          gh label create alerta --color B23A48 --description "Falla que requiere atención" 2>/dev/null || true
+          abierto=$(gh issue list --state open --label alerta --json number,title \
+            --jq '.[] | select(.title == "Producción degradada") | .number' | head -n 1)
+          if [ -n "$abierto" ]; then
+            gh issue comment "$abierto" --body "$cuerpo"
+          else
+            gh issue create --title "Producción degradada" --label alerta --body "$cuerpo"
+          fi
+
+      - name: Fallar si algo no pasó
+        if: ${{ steps.salud.outcome == 'failure' || steps.etl.outcome == 'failure' || steps.playwright.outcome == 'failure' }}
+        run: exit 1
+
+  mensual:
+    if: ${{ github.event.schedule == '0 9 1 * *' || inputs.trabajo == 'mensual' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      # GitHub desactiva los crons tras 60 días sin actividad en el repo; esto los reactiva.
+      - name: Reactivar workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for archivo in etl-diario.yml vigilancia.yml post-deploy.yml; do
+            gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/$archivo/enable"
+            echo "Reactivado: $archivo"
+          done
