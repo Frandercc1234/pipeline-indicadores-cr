@@ -10,3 +10,8 @@ test-results/
 playwright-report/
 dist/
 coverage/
+
+# Documentos de trabajo locales (no se publican)
+blueprint.md
+contexto-proyecto-3.md
+instrucciones-proyecto.md

@@ -43,3 +43,27 @@ jobs:
           BCCR_TOKEN: ${{ secrets.BCCR_TOKEN }}
           DATABASE_URL_ETL: ${{ secrets.DATABASE_URL_ETL }}
         run: python -m etl validar
+      - name: Resumen en Neon
+        working-directory: etl
+        env:
+          DATABASE_URL_ETL: ${{ secrets.DATABASE_URL_ETL }}
+        run: |
+          python - <<'PY'
+          import os
+
+          import psycopg
+
+          with psycopg.connect(os.environ["DATABASE_URL_ETL"], connect_timeout=30) as conn:
+              print("indicador | filas | primera fecha | última fecha")
+              for fila in conn.execute(
+                  "SELECT i.slug, count(*), min(o.fecha), max(o.fecha) FROM observacion o "
+                  "JOIN indicador i ON i.id = o.indicador_id GROUP BY i.id, i.slug ORDER BY i.id"
+              ):
+                  print(" | ".join(str(c) for c in fila))
+              print("rol | superuser | createrole | createdb | bypassrls")
+              for fila in conn.execute(
+                  "SELECT rolname, rolsuper, rolcreaterole, rolcreatedb, rolbypassrls "
+                  "FROM pg_roles WHERE rolname IN ('etl_writer', 'api_reader') ORDER BY 1"
+              ):
+                  print(" | ".join(str(c) for c in fila))
+          PY
