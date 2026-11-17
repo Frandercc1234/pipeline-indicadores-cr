@@ -1,0 +1,45 @@
+name: ETL backfill
+
+# Manual. Carga el histórico real del BCCR en Neon y después lo valida contra la fuente.
+on:
+  workflow_dispatch:
+    inputs:
+      desde:
+        description: Fecha inicial de la carga (YYYY-MM-DD)
+        required: true
+        default: "2015-01-01"
+
+permissions:
+  contents: read
+
+concurrency: etl
+
+jobs:
+  backfill:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.10"
+          cache: pip
+          cache-dependency-path: etl/requirements.txt
+      - name: Instalar dependencias del ETL
+        run: pip install -r etl/requirements.txt
+      - name: Backfill
+        working-directory: etl
+        env:
+          BCCR_MODO: real
+          BCCR_BASE_URL: https://apim.bccr.fi.cr/SDDE/api/Bccr.GE.SDDE.Publico.Indicadores.API
+          BCCR_TOKEN: ${{ secrets.BCCR_TOKEN }}
+          DATABASE_URL_ETL: ${{ secrets.DATABASE_URL_ETL }}
+          DESDE: ${{ inputs.desde }}
+        run: python -m etl backfill --desde "$DESDE"
+      - name: Validar contra el BCCR
+        working-directory: etl
+        env:
+          BCCR_MODO: real
+          BCCR_BASE_URL: https://apim.bccr.fi.cr/SDDE/api/Bccr.GE.SDDE.Publico.Indicadores.API
+          BCCR_TOKEN: ${{ secrets.BCCR_TOKEN }}
+          DATABASE_URL_ETL: ${{ secrets.DATABASE_URL_ETL }}
+        run: python -m etl validar
