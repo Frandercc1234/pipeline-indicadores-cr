@@ -172,6 +172,11 @@ jobs:
             api/package-lock.json
             web/package-lock.json
             e2e/package-lock.json
+      - name: Registrar una carga diaria simulada (para que /salud no salga degradado)
+        working-directory: etl
+        env:
+          BCCR_MODO: simulado
+        run: python -m etl diario
       - name: Compilar y levantar la API
         working-directory: api
         env:
