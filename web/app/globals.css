@@ -16,6 +16,9 @@
   --color-serie-compra: #c2367e;
   --color-codigo-fondo: #151d30;
   --color-codigo-texto: #e6eaf2;
+  /* Resaltado de los bloques de código (los usa la maqueta): claves y comentarios. */
+  --color-codigo-clave: #b7a6ff;
+  --color-codigo-comentario: #8f9ab0;
 
   --font-display: var(--font-bricolage), system-ui, sans-serif;
   --font-texto: var(--font-schibsted), system-ui, sans-serif;
@@ -50,6 +53,27 @@
     outline: 2px solid var(--color-marca);
     outline-offset: 2px;
     border-radius: 2px;
+  }
+}
+
+/* Bloque de carga: brillo que recorre el bloque. Se detiene con prefers-reduced-motion. */
+@keyframes brillo {
+  to {
+    background-position: -200% 0;
+  }
+}
+@utility esqueleto {
+  background: linear-gradient(
+    90deg,
+    var(--color-trama-suave) 0%,
+    color-mix(in srgb, var(--color-trama-suave) 60%, white) 50%,
+    var(--color-trama-suave) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: 3px;
+  animation: brillo 1.4s linear infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
   }
 }
 

@@ -4,6 +4,8 @@ import {
   JetBrains_Mono,
   Schibsted_Grotesk,
 } from "next/font/google";
+import Encabezado from "@/components/Encabezado";
+import Pie from "@/components/Pie";
 import "./globals.css";
 
 // Bricolage Grotesque variable con los ejes de tamaño óptico (opsz) y ancho (wdth).
@@ -40,8 +42,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="es"
       className={`${bricolage.variable} ${schibsted.variable} ${jetbrains.variable}`}
     >
-      <body className="min-h-screen bg-papel font-texto text-tinta antialiased">
+      <body className="flex min-h-screen flex-col bg-papel font-texto text-tinta antialiased">
+        <Encabezado />
         {children}
+        <Pie />
       </body>
     </html>
   );
