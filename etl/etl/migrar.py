@@ -49,7 +49,7 @@ def sembrar_indicadores(conn: psycopg.Connection) -> int:
 def migrar() -> int:
     url = requerir("DATABASE_URL_ADMIN")["DATABASE_URL_ADMIN"]
     try:
-        with psycopg.connect(url) as conn:
+        with psycopg.connect(url, connect_timeout=10) as conn:
             nuevas = aplicar_migraciones(conn)
             sembrados = sembrar_indicadores(conn)
     except psycopg.Error as error:
