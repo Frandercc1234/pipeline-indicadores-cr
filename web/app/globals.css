@@ -21,7 +21,8 @@
   --color-codigo-comentario: #8f9ab0;
 
   --font-display: var(--font-bricolage), system-ui, sans-serif;
-  --font-texto: var(--font-schibsted), system-ui, sans-serif;
+  /* Bricolage va segunda para que el ₡ (que Schibsted no trae) salga de la misma fuente que las cifras. */
+  --font-texto: var(--font-schibsted), var(--font-bricolage), system-ui, sans-serif;
   --font-codigo: var(--font-jetbrains), ui-monospace, monospace;
 
   --radius-control: 6px;

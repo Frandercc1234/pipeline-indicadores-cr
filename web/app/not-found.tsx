@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { BOTON, ENVOLTURA } from "@/components/botones";
+
+export const metadata: Metadata = {
+  title: "Página no encontrada | Indicadores CR",
+};
 
 export default function NoExiste() {
   return (
