@@ -296,7 +296,7 @@ ALTER TABLE indicador
 - **El token del BCCR** solo existe en `etl/.env` (local) y en el secret `BCCR_TOKEN` de GitHub. Nunca se imprime: el cliente no registra los headers, y los errores del BCCR se resumen a código HTTP y mensaje, sin el cuerpo completo.
 - **Si una clave se filtra** (en un chat, en un commit o en un log), se rota de inmediato: token nuevo en el BCCR o contraseña nueva del rol en Neon. Después se actualiza el secret.
 - **Mínimo privilegio en la base.** No hay RLS porque no hay usuarios finales. El control es por rol: la API se conecta con `api_reader` (solo `SELECT`), el ETL con `etl_writer` (sin `DELETE` ni DDL) y las migraciones con el rol dueño, solo desde `migrar.yml` o en local.
-- **Conexiones a Neon** con `sslmode=require`.
+- **Conexiones a Neon** con `sslmode=require`. La API no arranca si `DATABASE_URL_API` apunta a un host que no sea `localhost`, `127.0.0.1` o `db` y no incluye `sslmode=require`: muestra "DATABASE_URL_API debe incluir sslmode=require" sin imprimir la cadena.
 - **API:** solo `GET`. ValidationPipe con `whitelist: true` y `forbidNonWhitelisted: true`. `slug` validado contra `^[a-z_]+$`. Fechas en formato `YYYY-MM-DD`, `desde <= hasta` y `desde >= 2015-01-01`. Todas las consultas SQL son parametrizadas (`$1`, `$2`), nunca concatenadas.
 - **Límite de peticiones:** 60 por minuto por IP (`THROTTLE_LIMIT`, `THROTTLE_TTL_MS`). Responde 429.
 - **CORS:** solo `CORS_ORIGENES` (la URL de Vercel y `http://localhost:3000`).
