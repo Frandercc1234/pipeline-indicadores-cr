@@ -393,29 +393,30 @@ El detalle pide la serie completa desde 2015 una sola vez (con ISR) y filtra el 
 
 ## 10. UI
 
-**Sistema visual propio**, distinto al de PuraReserva y al de turismo-cr. Los tokens finales salen del diseño aprobado en Figma (`docs/diseno/tokens.json`, paso 13). Si el diseño los cambia, manda el diseño. Estos son los tokens de partida:
+**El diseño aprobado está en `docs/diseno/`** (`maqueta.html`, `tokens.json`, `README.md`, `capturas/`). Si algo de esta sección choca con esos archivos, mandan esos archivos.
+
+Concepto "papel de seguridad": la roseta guilloché (curvas propias generadas por código) solo detrás del tipo de cambio del inicio. Los otros indicadores van como filas de un libro contable, no como tarjetas iguales.
 
 | Token | Valor | Uso |
 |---|---|---|
-| `fondo` | `#F6F4EF` | Fondo general (papel) |
-| `superficie` | `#FFFFFF` | Tarjetas |
-| `tinta` | `#1A1D21` | Texto principal |
-| `tinta-suave` | `#5B616B` | Texto secundario |
-| `borde` | `#E2DED5` | Bordes y separadores |
-| `primario` | `#0F4C5C` | Encabezado, enlaces y línea de venta |
-| `acento` | `#D08C2E` | Línea de compra y foco |
-| `sube` | `#2F7D4F` | Variación positiva |
-| `baja` | `#B23A48` | Variación negativa |
+| `papel` | `#EEF1F6` | Fondo general |
+| `superficie` | `#FFFFFF` | Paneles, gráfico y tabla |
+| `tinta` | `#151D30` | Texto principal, botón principal |
+| `tinta-2` | `#4B5569` | Texto secundario |
+| `tinta-3` | `#5E677A` | Ejes y notas |
+| `trama` | `#C9D0DC` | Bordes, divisores y roseta |
+| `borde-control` | `#8A93A6` | Borde del selector de rango |
+| `marca` | `#5B3BD0` | Enlaces, foco y control activo |
+| `serie-venta` | `#2350C2` | Línea de venta |
+| `serie-compra` | `#C2367E` | Línea de compra |
 
-- **Tipografía:** IBM Plex Sans para texto y IBM Plex Mono para cifras, con `tabular-nums`. Se cargan con `next/font/google`.
-- **Escala:** 12, 14, 16, 20, 28 y 40 px. Espaciado en múltiplos de 4 px (escala de Tailwind). Radio de 8 px en tarjetas.
-- **Formato de números:** `Intl.NumberFormat("es-CR")`. Colones con 2 decimales y símbolo ₡. Porcentajes con 2 decimales y `%`. Fechas como "16 nov 2026".
-- **Variación:** flecha más texto ("+0,45 %"), no solo color.
-- **Responsive:** móvil primero. A 375 px, las tarjetas van en 1 columna; desde `sm`, en 2; desde `lg`, en 3. Los gráficos usan `ResponsiveContainer` con alto de 240 px en móvil y 360 px en escritorio. Nada se desborda en horizontal a 375 px; la tabla del detalle va dentro de `overflow-x-auto`.
-- **Accesibilidad:** contraste AA (revisar `tinta-suave` sobre `fondo`), foco visible con anillo de `acento`, `aria-label` en el selector de rango, y cada gráfico con un `figcaption` que resume el último valor. El HTML usa `lang="es"`.
+- **Tipografía:** Bricolage Grotesque (cifras y títulos, ancho 82 a 90 %), Schibsted Grotesk (texto, tablas, controles) y JetBrains Mono (solo código). Se cargan con `next/font/google`.
+- **Escala y espaciado:** ver `tokens.json`. Radio de 6 px en controles y de 2 px en paneles.
+- **Formato de números:** `Intl.NumberFormat("es-CR")`. Colones con 2 decimales y ₡. Porcentajes con 2 decimales y `%`. Fechas como "17 nov 2026". Cifras tabulares solo en celdas numéricas y en el eje Y.
+- **Variación:** flecha más texto, en tinta. Nunca verde ni rojo.
+- **Responsive:** a 375 px cada fila del libro va en 3 líneas (nombre arriba; minigráfico con valor y cambio debajo). El eje X muestra 3 fechas y el tooltip aparece al tocar. Nada se desborda en horizontal salvo los bloques de código, que tienen su propio scroll.
+- **Accesibilidad:** contraste AA verificado (ver `docs/diseno/README.md`), foco visible con anillo `marca`, objetivos táctiles de 44 px, `aria-label` en el selector de rango, cada gráfico con `figcaption` y la tabla del detalle como alternativa. HTML con `lang="es"`. La animación del trazo respeta `prefers-reduced-motion`.
 - **Estilos:** solo clases de Tailwind y tokens en `@theme`. Sin estilos inline (salvo los colores que Recharts pide por prop, tomados de una constante que lee los tokens).
-
----
 
 ## 11. Variables de entorno
 

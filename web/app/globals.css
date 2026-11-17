@@ -1,26 +1,68 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Tokens de docs/diseno/tokens.json, con los mismos nombres. Si el diseño cambia, manda el diseño. */
+@theme {
+  --color-papel: #eef1f6;
+  --color-superficie: #ffffff;
+  --color-tinta: #151d30;
+  --color-tinta-2: #4b5569;
+  --color-tinta-3: #5e677a;
+  --color-trama: #c9d0dc;
+  --color-trama-suave: #dde2ea;
+  --color-borde-control: #8a93a6;
+  --color-marca: #5b3bd0;
+  --color-marca-suave: #ece8fb;
+  --color-serie-venta: #2350c2;
+  --color-serie-compra: #c2367e;
+  --color-codigo-fondo: #151d30;
+  --color-codigo-texto: #e6eaf2;
+
+  --font-display: var(--font-bricolage), system-ui, sans-serif;
+  --font-texto: var(--font-schibsted), system-ui, sans-serif;
+  --font-codigo: var(--font-jetbrains), ui-monospace, monospace;
+
+  --radius-control: 6px;
+  --radius-panel: 2px;
+
+  /* Ancho del contenido: max-w-contenido */
+  --container-contenido: 1120px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--color-papel);
+    color: var(--color-tinta);
+    font-family: var(--font-texto);
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  a {
+    color: var(--color-marca);
+    text-underline-offset: 3px;
+  }
+  a:hover {
+    text-decoration-thickness: 2px;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-marca);
+    outline-offset: 2px;
+    border-radius: 2px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Ancho (eje wdth) de Bricolage Grotesque: 82 % a 90 % según el uso. */
+@utility ancho-82 {
+  font-stretch: 82%;
+}
+@utility ancho-85 {
+  font-stretch: 85%;
+}
+@utility ancho-88 {
+  font-stretch: 88%;
+}
+@utility ancho-90 {
+  font-stretch: 90%;
 }
