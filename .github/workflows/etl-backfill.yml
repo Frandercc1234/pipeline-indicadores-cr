@@ -66,4 +66,11 @@ jobs:
                   "FROM pg_roles WHERE rolname IN ('etl_writer', 'api_reader') ORDER BY 1"
               ):
                   print(" | ".join(str(c) for c in fila))
+              print("miembro | grupo (no debe aparecer ninguna fila)")
+              for fila in conn.execute(
+                  "SELECT m.rolname, g.rolname FROM pg_auth_members am "
+                  "JOIN pg_roles m ON m.oid = am.member JOIN pg_roles g ON g.oid = am.roleid "
+                  "WHERE m.rolname IN ('etl_writer', 'api_reader') ORDER BY 1, 2"
+              ):
+                  print(" | ".join(str(c) for c in fila))
           PY
