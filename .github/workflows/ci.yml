@@ -147,6 +147,85 @@ jobs:
           NEXT_PUBLIC_API_URL: http://127.0.0.1:3001
         run: npm run build
 
+  e2e:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17.12-alpine
+        env:
+          POSTGRES_USER: indicadores_owner
+          POSTGRES_PASSWORD: ci_owner_local
+          POSTGRES_DB: indicadores
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U indicadores_owner -d indicadores"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/preparar-base
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.18.0"
+          cache: npm
+          cache-dependency-path: |
+            api/package-lock.json
+            web/package-lock.json
+            e2e/package-lock.json
+      - name: Compilar y levantar la API
+        working-directory: api
+        env:
+          PORT: "3001"
+          CORS_ORIGENES: http://localhost:3000
+          THROTTLE_LIMIT: "1000"
+          THROTTLE_TTL_MS: "60000"
+        run: |
+          npm ci
+          npm run build
+          nohup node dist/main > ../api.log 2>&1 &
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:3001/salud/vivo && exit 0
+            sleep 1
+          done
+          echo "La API no arrancó"; cat ../api.log; exit 1
+      - name: Compilar y levantar el web
+        working-directory: web
+        env:
+          API_URL: http://127.0.0.1:3001
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:3001
+        run: |
+          npm ci
+          npm run build
+          nohup npm start -- --port 3000 > ../web.log 2>&1 &
+          for _ in $(seq 1 30); do
+            curl -fsS -o /dev/null http://127.0.0.1:3000/ && exit 0
+            sleep 1
+          done
+          echo "El web no arrancó"; cat ../web.log; exit 1
+      - name: Instalar Playwright
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Playwright
+        working-directory: e2e
+        env:
+          URL_WEB: http://127.0.0.1:3000
+          URL_API: http://127.0.0.1:3001
+        run: npx playwright test
+      - name: Subir el reporte de Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7
+      - name: Registros de la API y del web
+        if: failure()
+        run: tail -n 50 api.log web.log
+
   docker:
     runs-on: ubuntu-24.04
     steps:

@@ -42,7 +42,7 @@ export default function FilaIndicador({
   const ruta = rutaChispa(historial);
 
   return (
-    <li>
+    <li data-indicador={indicador.slug}>
       <Link
         href={`/indicador/${indicador.slug}`}
         className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-trama px-2 py-4 text-tinta no-underline hover:bg-white/70 md:grid-cols-[minmax(0,1.6fr)_160px_minmax(0,1fr)_minmax(0,1fr)_24px] md:gap-6"

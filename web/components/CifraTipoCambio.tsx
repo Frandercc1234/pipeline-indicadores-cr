@@ -21,7 +21,7 @@ export default function CifraTipoCambio({
   const cambio = anterior ? calcularCambio("colones", ultimo, anterior) : null;
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" data-indicador={indicador.slug}>
       <span className="flex items-center gap-2 text-[15px] text-tinta-2">
         <span className={`size-2.5 flex-none rounded-full ${punto}`} aria-hidden="true" />
         {etiqueta}
