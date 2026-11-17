@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta: Indicadores CR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Schibsted+Grotesk:wght@400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ===== Tokens (los mismos de docs/diseno/tokens.json) ===== */
+:root {
+  --papel: #EEF1F6;
+  --superficie: #FFFFFF;
+  --tinta: #151D30;
+  --tinta-2: #4B5569;
+  --tinta-3: #5E677A;
+  --trama: #C9D0DC;
+  --trama-suave: #DDE2EA;
+  --marca: #5B3BD0;
+  --marca-suave: #ECE8FB;
+  --serie-venta: #2350C2;
+  --serie-compra: #C2367E;
+  --codigo-fondo: #151D30;
+  --codigo-texto: #E6EAF2;
+
+  --f-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --f-texto: "Schibsted Grotesk", system-ui, sans-serif;
+  --f-codigo: "JetBrains Mono", ui-monospace, monospace;
+
+  --e-1: 4px; --e-2: 8px; --e-3: 12px; --e-4: 16px; --e-5: 24px; --e-6: 32px; --e-7: 48px; --e-8: 64px;
+  --r-control: 6px;
+  --r-panel: 2px;
+  --ancho: 1120px;
+}
+
+* { box-sizing: border-box; margin: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--papel);
+  color: var(--tinta);
+  font: 400 16px/1.5 var(--f-texto);
+}
+td.num, .eje-y { font-variant-numeric: tabular-nums; }
+.variacion, .fila-cambio, .grafico-pie, p { font-variant-numeric: normal; }
+a { color: var(--marca); text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--marca); outline-offset: 2px; border-radius: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ===== Barra de la maqueta (no es parte del diseño) ===== */
+.maqueta-barra {
+  display: flex; gap: var(--e-2); align-items: center; flex-wrap: wrap;
+  padding: var(--e-2) var(--e-4);
+  background: #FFF8D6; border-bottom: 1px solid #E5D78A;
+  font-size: 13px; color: #4A4220;
+}
+.maqueta-barra a { color: #4A4220; padding: 2px 8px; border-radius: 4px; text-decoration: none; }
+.maqueta-barra a[aria-current="page"] { background: #4A4220; color: #FFF8D6; }
+
+.pantalla { display: none; }
+.pantalla.activa { display: block; }
+
+/* ===== Encabezado ===== */
+.envoltura { max-width: calc(var(--ancho) + 2 * var(--e-5)); margin: 0 auto; padding: 0 var(--e-5); }
+.encabezado { border-bottom: 1px solid var(--trama); background: var(--papel); }
+.encabezado .envoltura { display: flex; align-items: center; justify-content: space-between; gap: var(--e-4); min-height: 64px; }
+.marca-nombre {
+  font: 700 20px/1 var(--f-display); font-stretch: 85%; letter-spacing: -0.01em;
+  color: var(--tinta); text-decoration: none; display: flex; align-items: center; gap: var(--e-2); min-height: 44px;
+}
+.marca-nombre svg { flex: none; }
+.nav { display: flex; gap: var(--e-5); font-size: 15px; }
+.nav a { color: var(--tinta-2); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+.nav a[aria-current="page"] { color: var(--tinta); box-shadow: inset 0 -2px 0 var(--marca); }
+
+/* ===== Hero: tipo de cambio ===== */
+.hero { position: relative; overflow: hidden; padding: var(--e-7) 0 var(--e-6); }
+.roseta { position: absolute; right: -140px; top: -120px; width: 620px; height: 620px; pointer-events: none; }
+.hero .envoltura { position: relative; }
+.hero-titulo { font: 600 15px/1.4 var(--f-texto); color: var(--tinta-2); }
+.hero-cifras { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--e-5) var(--e-7); margin-top: var(--e-3); }
+.cifra-principal { display: flex; flex-direction: column; }
+.cifra-etiqueta { font-size: 15px; color: var(--tinta-2); display: flex; align-items: center; gap: var(--e-2); }
+.punto { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.cifra-grande {
+  font: 700 clamp(64px, 11vw, 132px)/0.9 var(--f-display);
+  font-stretch: 88%; font-variation-settings: "opsz" 96;
+  letter-spacing: -0.02em; margin-top: var(--e-2);
+}
+.cifra-grande .simbolo { font-weight: 500; color: var(--tinta-2); margin-right: 0.04em; }
+.cifra-media { font: 650 44px/1 var(--f-display); font-stretch: 90%; letter-spacing: -0.01em; margin-top: var(--e-2); }
+.cifra-media .simbolo { font-weight: 500; color: var(--tinta-2); }
+.variacion { font-size: 15px; color: var(--tinta-2); margin-top: var(--e-2); display: flex; gap: 6px; align-items: baseline; }
+.variacion b { color: var(--tinta); font-weight: 600; }
+
+/* ===== Gráfico ===== */
+.grafico { margin-top: var(--e-6); background: var(--superficie); border: 1px solid var(--trama); border-radius: var(--r-panel); padding: var(--e-5) var(--e-5) var(--e-4); }
+.grafico-cabeza { display: flex; justify-content: space-between; align-items: baseline; gap: var(--e-4); flex-wrap: wrap; }
+.grafico-cabeza h2 { font: 650 18px/1.3 var(--f-display); font-stretch: 90%; }
+.leyenda { display: flex; gap: var(--e-4); font-size: 14px; color: var(--tinta-2); }
+.leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.leyenda i { width: 16px; height: 2px; border-radius: 1px; display: inline-block; }
+.lienzo { position: relative; margin-top: var(--e-4); display: grid; grid-template-columns: 44px 1fr 68px; }
+.eje-y { position: relative; height: 300px; font-size: 12px; color: var(--tinta-3); }
+.eje-y span { position: absolute; right: 8px; transform: translateY(-50%); }
+.area { position: relative; height: 300px; }
+.area svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.rejilla line { stroke: var(--trama-suave); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.serie { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.eje-x { grid-column: 2; position: relative; height: 24px; margin-top: 6px; font-size: 12px; color: var(--tinta-3); }
+.eje-x span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.eje-x span:first-child { transform: none; }
+.eje-x span:last-child { transform: translateX(-100%); }
+.etiquetas { position: relative; height: 300px; }
+.etiqueta-directa { position: absolute; left: 8px; font-size: 13px; font-weight: 600; white-space: nowrap; transform: translateY(-50%); }
+.mira { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--tinta-3); opacity: .5; }
+.tooltip {
+  position: absolute; top: 12px; transform: translateX(-50%);
+  background: var(--tinta); color: #fff; border-radius: var(--r-control);
+  padding: var(--e-2) var(--e-3); font-size: 13px; line-height: 1.45; white-space: nowrap;
+}
+.tooltip b { font-weight: 600; }
+.grafico-pie { margin-top: var(--e-3); font-size: 13px; color: var(--tinta-3); display: flex; justify-content: space-between; gap: var(--e-4); flex-wrap: wrap; }
+.trazo-entrada { stroke-dasharray: 3000; stroke-dashoffset: 3000; animation: dibujar 1.4s ease-out .2s forwards; }
+@keyframes dibujar { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .trazo-entrada { animation: none; stroke-dashoffset: 0; } }
+
+/* ===== Libro de indicadores (filas, no tarjetas) ===== */
+.libro { padding: var(--e-6) 0 var(--e-8); }
+.libro h2 { font: 650 24px/1.2 var(--f-display); font-stretch: 85%; letter-spacing: -0.01em; }
+.libro-intro { color: var(--tinta-2); margin-top: var(--e-1); max-width: 60ch; }
+.filas { margin-top: var(--e-5); border-top: 2px solid var(--tinta); }
+.fila {
+  display: grid; grid-template-columns: minmax(0, 1.6fr) 160px minmax(0, 1fr) minmax(0, 1fr) 24px;
+  align-items: center; gap: var(--e-5);
+  padding: var(--e-4) var(--e-2); border-bottom: 1px solid var(--trama);
+  color: inherit; text-decoration: none;
+}
+.fila:hover { background: rgba(255,255,255,.7); }
+.fila-nombre { font: 600 17px/1.3 var(--f-texto); }
+.fila-unidad { font-size: 14px; color: var(--tinta-3); margin-top: 2px; }
+.fila svg.chispa { width: 160px; height: 40px; overflow: visible; }
+.chispa path { fill: none; stroke: var(--tinta); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.chispa circle { fill: var(--tinta); }
+.fila-valor { font: 650 30px/1 var(--f-display); font-stretch: 90%; letter-spacing: -0.005em; text-align: right; }
+.fila-valor small { font-size: 18px; font-weight: 500; color: var(--tinta-2); margin-left: 2px; }
+.fila-cambio { font-size: 14px; color: var(--tinta-2); }
+.fila-cambio b { color: var(--tinta); font-weight: 600; }
+.fila-flecha { color: var(--tinta-3); }
+
+/* ===== Pie ===== */
+.pie { border-top: 1px solid var(--trama); padding: var(--e-5) 0 var(--e-7); font-size: 14px; color: var(--tinta-2); }
+.pie .envoltura { display: flex; justify-content: space-between; gap: var(--e-4); flex-wrap: wrap; }
+
+/* ===== Detalle ===== */
+.migas { padding-top: var(--e-6); font-size: 14px; }
+.detalle-cabeza { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--e-5); flex-wrap: wrap; margin-top: var(--e-4); }
+.detalle-cabeza h1 { font: 700 40px/1.05 var(--f-display); font-stretch: 82%; letter-spacing: -0.02em; max-width: 18ch; }
+.detalle-sub { color: var(--tinta-2); margin-top: var(--e-2); }
+.detalle-valor { text-align: right; }
+.detalle-valor .cifra-media { font-size: 56px; }
+.segmentos { display: inline-flex; border: 1px solid #8A93A6; border-radius: var(--r-control); background: var(--superficie); padding: 3px; gap: 2px; }
+.segmentos button {
+  font: 500 14px/1 var(--f-texto); color: var(--tinta-2); background: none; border: 0;
+  padding: 9px 12px; border-radius: 4px; cursor: pointer; min-height: 44px; white-space: nowrap;
+}
+.segmentos button[aria-pressed="true"] { background: var(--tinta); color: #fff; }
+.segmentos button:hover:not([aria-pressed="true"]) { background: var(--marca-suave); color: var(--tinta); }
+.tabla-marco { margin-top: var(--e-6); overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 320px; }
+caption { text-align: left; font: 650 18px/1.3 var(--f-display); font-stretch: 90%; padding-bottom: var(--e-3); }
+th { text-align: left; font-weight: 600; color: var(--tinta-2); font-size: 14px; padding: var(--e-2) var(--e-3); border-bottom: 2px solid var(--tinta); }
+td { padding: var(--e-3); border-bottom: 1px solid var(--trama); }
+td.num, th.num { text-align: right; }
+.fuente { margin-top: var(--e-4); font-size: 14px; color: var(--tinta-2); }
+
+/* ===== Desarrolladores ===== */
+.dev { padding-top: var(--e-7); padding-bottom: var(--e-8); display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--e-7); }
+.dev h1 { font: 700 44px/1.05 var(--f-display); font-stretch: 82%; letter-spacing: -0.02em; }
+.dev .lead { font-size: 18px; color: var(--tinta-2); margin-top: var(--e-3); max-width: 58ch; }
+.dev h2 { font: 650 22px/1.25 var(--f-display); font-stretch: 88%; margin-top: var(--e-7); }
+.dev p { max-width: 64ch; margin-top: var(--e-2); }
+.base-url { margin-top: var(--e-4); display: flex; align-items: center; gap: var(--e-3); flex-wrap: wrap; background: var(--superficie); border: 1px solid var(--trama); border-radius: var(--r-control); padding: var(--e-3) var(--e-4); }
+.base-url code { font: 500 15px/1.4 var(--f-codigo); word-break: break-all; }
+.boton {
+  font: 600 14px/1 var(--f-texto); border-radius: var(--r-control); padding: 10px 14px; min-height: 44px;
+  border: 1px solid var(--tinta); background: var(--tinta); color: #fff; cursor: pointer;
+  display: inline-flex; align-items: center; gap: var(--e-2); text-decoration: none;
+}
+.boton.secundario { background: transparent; color: var(--tinta); }
+.rutas { margin-top: var(--e-4); border-top: 2px solid var(--tinta); }
+.ruta { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: var(--e-3); padding: var(--e-4) 0; border-bottom: 1px solid var(--trama); }
+.metodo { font: 600 12px/1 var(--f-codigo); color: var(--marca); background: var(--marca-suave); border-radius: 4px; padding: 5px 0; text-align: center; height: max-content; }
+.ruta code { font: 500 15px/1.4 var(--f-codigo); word-break: break-word; }
+.ruta p { color: var(--tinta-2); font-size: 15px; margin-top: 4px; }
+pre { margin-top: var(--e-4); background: var(--codigo-fondo); color: var(--codigo-texto); border-radius: var(--r-control); padding: var(--e-4) var(--e-5); overflow-x: auto; font: 400 14px/1.6 var(--f-codigo); }
+pre .c { color: #8F9AB0; }
+pre .k { color: #B7A6FF; }
+.aside { position: sticky; top: 80px; align-self: start; border-left: 2px solid var(--tinta); padding-left: var(--e-5); font-size: 15px; }
+.aside dt { color: var(--tinta-3); font-size: 14px; margin-top: var(--e-4); }
+.aside dt:first-child { margin-top: 0; }
+.aside dd { font-weight: 600; }
+.aviso { margin-top: var(--e-5); border: 1px solid var(--trama); background: var(--superficie); border-radius: var(--r-control); padding: var(--e-4); font-size: 15px; }
+
+/* ===== Estados ===== */
+.estados { padding-top: var(--e-6); padding-bottom: var(--e-8); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e-5); }
+.estado-caja { background: var(--superficie); border: 1px solid var(--trama); border-radius: var(--r-panel); padding: var(--e-5); }
+.estado-caja > h3 { font: 600 13px/1 var(--f-texto); color: var(--tinta-3); margin-bottom: var(--e-4); }
+.esqueleto { background: linear-gradient(90deg, var(--trama-suave) 0%, #E9EDF3 50%, var(--trama-suave) 100%); background-size: 200% 100%; border-radius: 3px; animation: brillo 1.4s linear infinite; }
+@keyframes brillo { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .esqueleto { animation: none; } }
+.mensaje h4 { font: 650 20px/1.25 var(--f-display); font-stretch: 88%; }
+.mensaje p { color: var(--tinta-2); margin-top: var(--e-2); max-width: 46ch; }
+.mensaje .acciones { margin-top: var(--e-4); display: flex; gap: var(--e-2); flex-wrap: wrap; }
+.no-existe { padding-top: var(--e-8); padding-bottom: var(--e-8); }
+.no-existe .cifra-grande { color: var(--trama); }
+.no-existe h1 { font: 700 36px/1.1 var(--f-display); font-stretch: 82%; margin-top: var(--e-4); }
+
+/* ===== Tokens ===== */
+.muestras { padding-top: var(--e-6); padding-bottom: var(--e-8); }
+.muestras h2 { font: 650 22px/1.25 var(--f-display); font-stretch: 88%; margin: var(--e-6) 0 var(--e-3); }
+.paleta { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--e-3); }
+.color { background: var(--superficie); border: 1px solid var(--trama); border-radius: var(--r-panel); overflow: hidden; font-size: 13px; }
+.color div { height: 64px; border-bottom: 1px solid var(--trama); }
+.color p { padding: var(--e-2) var(--e-3); }
+.color code { font: 400 12px/1.4 var(--f-codigo); color: var(--tinta-2); }
+.escala p { margin-top: var(--e-3); }
+
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+  .fila { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "nombre nombre" "chispa valor" "chispa cambio"; row-gap: var(--e-1); column-gap: var(--e-3); }
+  .fila svg.chispa { align-self: center; }
+  .fila-nombre-caja { grid-area: nombre; }
+  .fila svg.chispa { grid-area: chispa; width: 120px; height: 32px; }
+  .fila-valor { grid-area: valor; font-size: 26px; }
+  .fila-cambio { grid-area: cambio; text-align: right; }
+  .fila-flecha { display: none; }
+  .dev { grid-template-columns: minmax(0, 1fr); gap: var(--e-6); }
+  .aside { position: static; }
+  .estados { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .envoltura { padding-left: var(--e-4); padding-right: var(--e-4); }
+  .nav { gap: var(--e-4); font-size: 14px; }
+  .nav .ocultar-movil { display: none; }
+  .hero { padding-top: var(--e-6); }
+  .roseta { width: 380px; height: 380px; right: -170px; top: -90px; }
+  .hero-cifras { gap: var(--e-4) var(--e-6); }
+  .cifra-media { font-size: 36px; }
+  .grafico { padding: var(--e-4) var(--e-3) var(--e-3); margin-left: calc(-1 * var(--e-2)); margin-right: calc(-1 * var(--e-2)); }
+  .lienzo { grid-template-columns: 36px 1fr 58px; }
+  .eje-y, .area, .etiquetas { height: 200px; }
+  .eje-x .solo-ancho { display: none; }
+  .tooltip, .mira { display: none; }
+  .etiqueta-directa { font-size: 12px; }
+  .detalle-cabeza h1 { font-size: 32px; }
+  .detalle-valor { text-align: left; }
+  .detalle-valor .cifra-media { font-size: 44px; }
+  .segmentos { display: flex; width: 100%; }
+  .segmentos button { flex: 1; padding: 9px 4px; font-size: 13px; }
+  .dev h1 { font-size: 34px; }
+  pre { margin-left: calc(-1 * var(--e-4)); margin-right: calc(-1 * var(--e-4)); border-radius: 0; padding: var(--e-4); font-size: 13px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="maqueta-barra" aria-label="Pantallas de la maqueta">
+  <strong>Maqueta</strong>
+  <a href="#inicio">Inicio</a>
+  <a href="#detalle">Detalle</a>
+  <a href="#desarrolladores">Desarrolladores</a>
+  <a href="#estados">Estados</a>
+  <a href="#no-existe">404</a>
+  <a href="#tokens">Tokens</a>
+</nav>
+
+<!-- Encabezado compartido (se clona en cada pantalla) -->
+<template id="t-encabezado">
+  <header class="encabezado">
+    <div class="envoltura">
+      <a class="marca-nombre" href="#inicio">
+        <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="12" fill="none" stroke="var(--tinta)" stroke-width="1.5"/><path d="M5 15c3-6 5-6 8 0s5 6 8 0" fill="none" stroke="var(--marca)" stroke-width="1.5"/><path d="M5 11c3 6 5 6 8 0s5-6 8 0" fill="none" stroke="var(--tinta)" stroke-width="1.5"/></svg>
+        Indicadores CR
+      </a>
+      <nav class="nav" aria-label="Principal">
+        <a href="#inicio" data-nav="inicio">Indicadores</a>
+        <a href="#desarrolladores" data-nav="desarrolladores">API</a>
+        <a class="ocultar-movil" href="https://sdd.bccr.fi.cr">Fuente: BCCR</a>
+      </nav>
+    </div>
+  </header>
+</template>
+
+<template id="t-pie">
+  <footer class="pie">
+    <div class="envoltura">
+      <p>Datos del Banco Central de Costa Rica. Se actualizan a las 06:15 y a las 18:15.</p>
+      <p>Proyecto de <a href="https://github.com/Frandercc1234">Frander Centeno</a>. <a href="https://github.com/Frandercc1234/pipeline-indicadores-cr">Código</a></p>
+    </div>
+  </footer>
+</template>
+
+<!-- ============ INICIO ============ -->
+<main id="inicio" class="pantalla" data-encabezado="inicio">
+  <section class="hero" aria-labelledby="hero-titulo">
+    <svg class="roseta" viewBox="-310 -310 620 620" aria-hidden="true"></svg>
+    <div class="envoltura">
+      <h1 id="hero-titulo" class="hero-titulo">Tipo de cambio de referencia del dólar, martes 17 de noviembre de 2026</h1>
+      <div class="hero-cifras">
+        <div class="cifra-principal">
+          <span class="cifra-etiqueta"><span class="punto" style="background:var(--serie-venta)"></span>Venta</span>
+          <span class="cifra-grande"><span class="simbolo">₡</span>448,40</span>
+          <span class="variacion"><span aria-hidden="true">▲</span><b>₡0,06</b> respecto al lunes 16</span>
+        </div>
+        <div class="cifra-principal">
+          <span class="cifra-etiqueta"><span class="punto" style="background:var(--serie-compra)"></span>Compra</span>
+          <span class="cifra-media"><span class="simbolo">₡</span>441,73</span>
+          <span class="variacion"><span aria-hidden="true">▼</span><b>₡0,83</b> respecto al lunes 16</span>
+        </div>
+      </div>
+
+      <figure class="grafico">
+        <div class="grafico-cabeza">
+          <h2>Último año</h2>
+          <div class="leyenda" aria-hidden="true">
+            <span><i style="background:var(--serie-venta)"></i>Venta</span>
+            <span><i style="background:var(--serie-compra)"></i>Compra</span>
+          </div>
+        </div>
+        <div class="lienzo" data-grafico="tc"></div>
+        <figcaption class="grafico-pie">
+          <span>Bajó de ₡501,38 (venta, 17 nov 2025) a ₡448,40 en un año.</span>
+          <a href="#detalle">Ver tabla y otros rangos</a>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="libro" aria-labelledby="libro-titulo">
+    <div class="envoltura">
+      <h2 id="libro-titulo">Inflación y tasas de interés</h2>
+      <p class="libro-intro">Último dato publicado por el BCCR y su cambio respecto al dato anterior.</p>
+      <div class="filas" role="list">
+        <a class="fila" role="listitem" href="#detalle">
+          <div class="fila-nombre-caja"><div class="fila-nombre">Inflación interanual</div><div class="fila-unidad">Variación del IPC en 12 meses, octubre 2026</div></div>
+          <svg class="chispa" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="Últimos 12 meses: de −2,73 % a 0,55 %"><path d="M0 13L13 13L27 21L40 34L53 36L67 30L80 25L93 19L107 12L120 12L133 11L147 6L160 4"/></svg>
+          <div class="fila-valor">0,55<small>%</small></div>
+          <div class="fila-cambio"><span aria-hidden="true">▲</span> <b>0,21 p.p.</b> desde setiembre</div>
+          <span class="fila-flecha" aria-hidden="true">›</span>
+        </a>
+        <a class="fila" role="listitem" href="#detalle">
+          <div class="fila-nombre-caja"><div class="fila-nombre">Índice de precios al consumidor</div><div class="fila-unidad">Base diciembre 2020 = 100, octubre 2026</div></div>
+          <svg class="chispa" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="Últimos 12 meses: entre 98,74 y 100,00"><path d="M0 20L13 8L27 6L40 31L53 36L67 28L80 29L93 22L107 4L120 16L133 19L147 16L160 6"/></svg>
+          <div class="fila-valor">99,92</div>
+          <div class="fila-cambio"><span aria-hidden="true">▲</span> <b>0,39 %</b> desde setiembre</div>
+          <span class="fila-flecha" aria-hidden="true">›</span>
+        </a>
+        <a class="fila" role="listitem" href="#detalle">
+          <div class="fila-nombre-caja"><div class="fila-nombre">Tasa básica pasiva</div><div class="fila-unidad">Vigente al 18 de noviembre de 2026</div></div>
+          <svg class="chispa" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="Último año: de 3,79 % a 3,56 %"><path d="M0 4L6 5L12 7L18 5L24 8L30 12L36 12L41 17L47 22L53 22L59 25L65 29L71 28L77 25L83 25L89 23L95 22L101 23L107 23L113 23L119 26L124 29L130 33L136 36L142 35L148 36L154 36L160 36"/></svg>
+          <div class="fila-valor">3,56<small>%</small></div>
+          <div class="fila-cambio">Sin cambio</div>
+          <span class="fila-flecha" aria-hidden="true">›</span>
+        </a>
+        <a class="fila" role="listitem" href="#detalle">
+          <div class="fila-nombre-caja"><div class="fila-nombre">Tasa de política monetaria</div><div class="fila-unidad">Vigente al 16 de noviembre de 2026</div></div>
+          <svg class="chispa" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="Último año: de 3,50 % a 3,00 %"><path d="M0 4L6 4L12 4L18 20L25 20L31 20L37 20L43 20L49 20L55 20L62 20L68 20L74 20L80 20L86 20L92 20L98 20L105 20L111 36L117 36L123 36L129 36L135 36L142 36L148 36L154 36L160 36"/></svg>
+          <div class="fila-valor">3,00<small>%</small></div>
+          <div class="fila-cambio">Sin cambio</div>
+          <span class="fila-flecha" aria-hidden="true">›</span>
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ============ DETALLE ============ -->
+<main id="detalle" class="pantalla" data-encabezado="inicio">
+  <div class="envoltura">
+    <p class="migas"><a href="#inicio">Indicadores</a> <span aria-hidden="true">/</span> Tipo de cambio de venta</p>
+    <div class="detalle-cabeza">
+      <div>
+        <h1>Tipo de cambio de referencia, venta</h1>
+        <p class="detalle-sub">Colones por dólar. Diario desde 2015.</p>
+      </div>
+      <div class="detalle-valor">
+        <span class="cifra-etiqueta">17 nov 2026</span>
+        <div class="cifra-media"><span class="simbolo">₡</span>448,40</div>
+      </div>
+    </div>
+
+    <figure class="grafico">
+      <div class="grafico-cabeza">
+        <div class="segmentos" role="group" aria-label="Rango del gráfico">
+          <button type="button" aria-pressed="false">1 mes</button>
+          <button type="button" aria-pressed="false">6 meses</button>
+          <button type="button" aria-pressed="true">1 año</button>
+          <button type="button" aria-pressed="false">5 años</button>
+          <button type="button" aria-pressed="false">Todo</button>
+        </div>
+      </div>
+      <div class="lienzo" data-grafico="venta"></div>
+      <figcaption class="grafico-pie"><span>Mínimo del año ₡448,21. Máximo ₡502,64.</span></figcaption>
+    </figure>
+
+    <div class="tabla-marco" role="region" aria-label="Últimos 10 datos, desplazable" tabindex="0">
+      <table>
+        <caption>Últimos 10 datos</caption>
+        <thead><tr><th scope="col">Fecha</th><th scope="col" class="num">Venta (₡)</th><th scope="col" class="num">Cambio</th></tr></thead>
+        <tbody>
+          <tr><td>17 nov 2026</td><td class="num">448,40</td><td class="num">+0,06</td></tr>
+          <tr><td>16 nov 2026</td><td class="num">448,34</td><td class="num">0,00</td></tr>
+          <tr><td>15 nov 2026</td><td class="num">448,34</td><td class="num">0,00</td></tr>
+          <tr><td>14 nov 2026</td><td class="num">448,34</td><td class="num">−0,03</td></tr>
+          <tr><td>13 nov 2026</td><td class="num">448,37</td><td class="num">−1,72</td></tr>
+          <tr><td>12 nov 2026</td><td class="num">450,09</td><td class="num">−0,04</td></tr>
+          <tr><td>11 nov 2026</td><td class="num">450,13</td><td class="num">−0,89</td></tr>
+          <tr><td>10 nov 2026</td><td class="num">451,02</td><td class="num">−1,11</td></tr>
+          <tr><td>9 nov 2026</td><td class="num">452,13</td><td class="num">0,00</td></tr>
+          <tr><td>8 nov 2026</td><td class="num">452,13</td><td class="num">n/d</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="fuente">Fuente: <a href="https://sdd.bccr.fi.cr">Banco Central de Costa Rica, indicador 318</a>.</p>
+    <div style="height:64px" aria-hidden="true"></div>
+  </div>
+</main>
+
+<!-- ============ DESARROLLADORES ============ -->
+<main id="desarrolladores" class="pantalla" data-encabezado="desarrolladores">
+  <div class="envoltura dev">
+    <div>
+      <h1>Los mismos datos, en JSON</h1>
+      <p class="lead">Una API pública de solo lectura con los seis indicadores desde 2015. No pide registro ni clave.</p>
+
+      <div class="base-url">
+        <code>https://pipeline-indicadores-cr.onrender.com</code>
+        <a class="boton secundario" href="https://pipeline-indicadores-cr.onrender.com/docs">Abrir Swagger</a>
+      </div>
+
+      <h2>Rutas</h2>
+      <div class="rutas">
+        <div class="ruta"><span class="metodo">GET</span><div><code>/indicadores</code><p>Los seis indicadores con su último dato y el anterior.</p></div></div>
+        <div class="ruta"><span class="metodo">GET</span><div><code>/indicadores/{slug}</code><p>Un indicador. Slugs: tc_compra, tc_venta, ipc_indice, ipc_interanual, tbp, tpm.</p></div></div>
+        <div class="ruta"><span class="metodo">GET</span><div><code>/indicadores/{slug}/serie?desde=2026-01-01&amp;hasta=2026-11-17</code><p>La serie entre dos fechas, en orden. Sin fechas, devuelve todo desde 2015.</p></div></div>
+        <div class="ruta"><span class="metodo">GET</span><div><code>/salud</code><p>Estado de la base y hora de la última carga.</p></div></div>
+      </div>
+
+      <h2>Ejemplo</h2>
+<pre><code><span class="c"># Último tipo de cambio de venta</span>
+curl https://pipeline-indicadores-cr.onrender.com/indicadores/tc_venta
+
+{
+  <span class="k">"slug"</span>: "tc_venta",
+  <span class="k">"codigoBccr"</span>: 318,
+  <span class="k">"nombre"</span>: "Tipo de cambio de referencia, venta",
+  <span class="k">"unidad"</span>: "colones por dólar",
+  <span class="k">"ultimo"</span>: { <span class="k">"fecha"</span>: "2026-11-17", <span class="k">"valor"</span>: 448.4 },
+  <span class="k">"anterior"</span>: { <span class="k">"fecha"</span>: "2026-11-16", <span class="k">"valor"</span>: 448.34 }
+}</code></pre>
+
+      <div class="aviso">
+        <strong>La primera consulta puede tardar.</strong> La API corre en un plan gratuito que se suspende sin tráfico. Si tarda más de un minuto, volvé a intentar.
+      </div>
+    </div>
+
+    <aside class="aside" aria-label="Datos de la API">
+      <dl>
+        <dt>Límite</dt><dd>60 consultas por minuto por IP</dd>
+        <dt>Formato</dt><dd>JSON, fechas YYYY-MM-DD</dd>
+        <dt>Actualización</dt><dd>06:15 y 18:15, hora de Costa Rica</dd>
+        <dt>Historial</dt><dd>Desde el 1 de enero de 2015</dd>
+        <dt>Fuente</dt><dd><a href="https://sdd.bccr.fi.cr">Banco Central de Costa Rica</a></dd>
+      </dl>
+    </aside>
+  </div>
+</main>
+
+<!-- ============ ESTADOS ============ -->
+<main id="estados" class="pantalla" data-encabezado="inicio">
+  <div class="envoltura estados">
+    <section class="estado-caja" aria-label="Cargando">
+      <h3>Cargando: inicio</h3>
+      <div aria-busy="true" aria-label="Cargando el tipo de cambio">
+        <div class="esqueleto" style="height:14px;width:min(420px,80%)"></div>
+        <div style="display:flex;gap:32px;align-items:flex-end;margin-top:16px;flex-wrap:wrap">
+          <div class="esqueleto" style="height:96px;width:min(300px,70%)"></div>
+          <div class="esqueleto" style="height:44px;width:150px"></div>
+        </div>
+        <div class="esqueleto" style="height:180px;margin-top:24px"></div>
+      </div>
+    </section>
+
+    <section class="estado-caja" aria-label="Error">
+      <h3>Error: la API no respondió</h3>
+      <div class="mensaje" role="alert">
+        <h4>No pudimos cargar los indicadores</h4>
+        <p>La API no respondió en 90 segundos. Puede estar arrancando después de un rato sin uso.</p>
+        <div class="acciones"><button class="boton" type="button">Reintentar</button><a class="boton secundario" href="https://sdd.bccr.fi.cr">Ver en el BCCR</a></div>
+      </div>
+    </section>
+
+    <section class="estado-caja" aria-label="Vacío">
+      <h3>Vacío: sin datos en el rango</h3>
+      <div class="mensaje">
+        <h4>No hay datos en el último mes</h4>
+        <p>El BCCR publica este indicador una vez al mes y todavía no salió el dato de noviembre. Elegí un rango más largo.</p>
+        <div class="acciones"><button class="boton secundario" type="button">Ver 1 año</button></div>
+      </div>
+    </section>
+
+    <section class="estado-caja" aria-label="Fila sin datos">
+      <h3>Fila sin dato publicado</h3>
+      <div class="filas" style="margin-top:0">
+        <div class="fila" style="grid-template-columns:minmax(0,1fr) auto">
+          <div class="fila-nombre-caja"><div class="fila-nombre">Tasa de política monetaria</div><div class="fila-unidad">El BCCR no ha publicado datos</div></div>
+          <div class="fila-cambio">Sin datos</div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- ============ 404 ============ -->
+<main id="no-existe" class="pantalla" data-encabezado="ninguno">
+  <div class="envoltura no-existe">
+    <span class="cifra-grande" aria-hidden="true">404</span>
+    <h1>Esta página no existe</h1>
+    <p class="detalle-sub">Puede que el enlace esté mal escrito o que el indicador haya cambiado de nombre.</p>
+    <p style="margin-top:24px"><a class="boton" href="#inicio">Ir a los indicadores</a></p>
+  </div>
+</main>
+
+<!-- ============ TOKENS ============ -->
+<main id="tokens" class="pantalla" data-encabezado="ninguno">
+  <div class="envoltura muestras">
+    <h2>Color</h2>
+    <div class="paleta" id="paleta"></div>
+    <h2>Tipografía</h2>
+    <div class="escala">
+      <p style="font:700 clamp(56px, 18vw, 96px)/0.9 var(--f-display);font-stretch:88%;letter-spacing:-0.02em">₡448,40</p>
+      <p style="font:700 40px/1.05 var(--f-display);font-stretch:82%;letter-spacing:-0.02em">Bricolage Grotesque 700, ancho 82 a 90 %</p>
+      <p style="font:650 24px/1.2 var(--f-display);font-stretch:85%">Títulos de sección 650, 24 px</p>
+      <p style="font:400 16px/1.5 var(--f-texto)">Schibsted Grotesk 400, 16 px. Texto, tablas y controles, con cifras tabulares: 0123456789.</p>
+      <p style="font:400 14px/1.6 var(--f-codigo)">JetBrains Mono, solo para código.</p>
+    </div>
+    <h2>Espaciado</h2>
+    <p>4, 8, 12, 16, 24, 32, 48, 64 px. Radio 6 px en controles, 2 px en paneles.</p>
+  </div>
+</main>
+
+<script>
+// Encabezado y pie en cada pantalla
+const tEnc = document.getElementById('t-encabezado'), tPie = document.getElementById('t-pie');
+document.querySelectorAll('.pantalla').forEach(p => {
+  const enc = tEnc.content.cloneNode(true);
+  enc.querySelectorAll('[data-nav]').forEach(a => { if (a.dataset.nav === p.dataset.encabezado) a.setAttribute('aria-current', 'page'); });
+  p.prepend(enc);
+  p.append(tPie.content.cloneNode(true));
+});
+
+// Navegación de la maqueta
+function mostrar() {
+  const id = (location.hash || '#inicio').slice(1);
+  document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id));
+  document.querySelectorAll('.maqueta-barra a').forEach(a => a.toggleAttribute('aria-current', a.getAttribute('href') === '#' + id) || a.removeAttribute('aria-current'));
+  document.querySelectorAll('.maqueta-barra a').forEach(a => { if (a.getAttribute('href') === '#' + id) a.setAttribute('aria-current', 'page'); });
+  window.scrollTo(0, 0);
+}
+addEventListener('hashchange', mostrar); mostrar();
+
+// Roseta guilloché: curvas propias, no copiadas de ningún billete
+(function () {
+  const svg = document.querySelector('.roseta'); if (!svg) return;
+  const ns = 'http://www.w3.org/2000/svg';
+  const anillo = (R, A, n, vueltas, color, op) => {
+    for (let k = 0; k < vueltas; k++) {
+      const fase = (k / vueltas) * Math.PI * 2 / n;
+      let d = '';
+      for (let i = 0; i <= 720; i++) {
+        const t = (i / 720) * Math.PI * 2;
+        const r = R + A * Math.sin(n * t + fase * n) + (A * 0.35) * Math.sin((n * 2 + 1) * t);
+        d += (i ? 'L' : 'M') + (r * Math.cos(t)).toFixed(1) + ' ' + (r * Math.sin(t)).toFixed(1);
+      }
+      const p = document.createElementNS(ns, 'path');
+      p.setAttribute('d', d + 'Z'); p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', color); p.setAttribute('stroke-width', '0.8'); p.setAttribute('opacity', op);
+      svg.appendChild(p);
+    }
+  };
+  anillo(240, 46, 9, 18, 'var(--trama)', '0.9');
+  anillo(150, 30, 13, 14, 'var(--trama)', '0.7');
+  anillo(70, 18, 7, 10, 'var(--marca)', '0.18');
+})();
+
+// Gráficos con las series reales de la API (17 nov 2025 a 17 nov 2026, escala 440 a 510)
+const VENTA = "M0 37L12 33L24 44L37 58L49 67L61 79L73 35L85 41L97 53L110 51L122 42L134 37L146 32L158 42L170 38L183 79L195 82L207 42L219 58L231 46L243 47L256 58L268 96L280 108L292 144L304 143L317 153L329 139L341 134L353 157L365 165L377 174L390 185L402 183L414 177L426 177L438 191L450 198L463 220L475 227L487 226L499 227L511 224L523 212L536 216L548 233L560 239L572 233L584 233L597 214L609 199L621 211L633 220L645 232L657 231L670 237L682 231L694 231L706 232L718 234L730 244L743 246L755 238L767 234L779 238L791 239L803 241L816 250L828 252L840 243L852 248L864 250L877 245L889 241L901 246L913 257L925 265L937 260L950 239L962 226L974 205L986 224L998 233L1010 243L1023 242L1035 230L1047 233L1059 231L1071 237L1083 248L1096 257L1108 264L1120 264";
+const COMPRA = "M0 60L12 61L24 60L37 92L49 86L61 107L73 63L85 67L97 67L110 82L122 64L134 61L146 60L158 64L170 64L183 103L195 110L207 58L219 71L231 76L243 69L256 90L268 119L280 142L292 163L304 163L317 185L329 161L341 157L353 182L365 190L377 200L390 201L402 206L414 206L426 206L438 213L450 228L463 246L475 245L487 250L499 248L511 251L523 235L536 243L548 261L560 259L572 261L584 259L597 246L609 221L621 233L633 247L645 257L657 256L670 250L682 255L694 253L706 259L718 263L730 268L743 272L755 253L767 257L779 264L791 265L803 266L816 275L828 280L840 267L852 269L864 272L877 272L889 265L901 266L913 283L925 285L937 286L950 253L962 246L974 233L986 242L998 258L1010 261L1023 264L1035 247L1047 252L1059 258L1071 256L1083 272L1096 278L1108 289L1120 293";
+const LO = 440, HI = 510, y = v => (HI - v) / (HI - LO) * 100;
+
+document.querySelectorAll('.lienzo').forEach(l => {
+  const dos = l.dataset.grafico === 'tc';
+  const ticks = [440, 460, 480, 500];
+  l.innerHTML = `
+    <div class="eje-y" aria-hidden="true">${ticks.map(t => `<span style="top:${y(t)}%">₡${t}</span>`).join('')}</div>
+    <div class="area">
+      <svg viewBox="0 0 1120 300" preserveAspectRatio="none" role="img" aria-label="${dos ? 'Tipo de cambio de venta y de compra, último año' : 'Tipo de cambio de venta, último año'}">
+        <g class="rejilla">${ticks.map(t => `<line x1="0" x2="1120" y1="${(HI - t) / (HI - LO) * 300}" y2="${(HI - t) / (HI - LO) * 300}"/>`).join('')}</g>
+        ${dos ? `<path class="serie trazo-entrada" d="${COMPRA}" stroke="var(--serie-compra)"/>` : ''}
+        <path class="serie trazo-entrada" d="${VENTA}" stroke="var(--serie-venta)"/>
+      </svg>
+      <div class="mira" style="left:74.8%"></div>
+      <div class="tooltip" style="left:74.8%"><b>17 ago 2026</b><br>Venta ₡451,28${dos ? '<br>Compra ₡444,65' : ''}</div>
+    </div>
+    <div class="etiquetas" aria-hidden="true">
+      <span class="etiqueta-directa" style="top:${y(448.40) - 2}%;color:var(--tinta)">₡448,40</span>
+      ${dos ? `<span class="etiqueta-directa" style="top:${y(441.73) + 3}%;color:var(--tinta-2)">₡441,73</span>` : ''}
+    </div>
+    <div class="eje-x" aria-hidden="true">
+      <span style="left:0">nov 2025</span><span class="solo-ancho" style="left:25.2%">feb</span><span style="left:49.6%">may</span><span class="solo-ancho" style="left:74.8%">ago</span><span style="left:100%">nov 2026</span>
+    </div>`;
+});
+
+// Paleta en la pantalla de tokens
+const paleta = [['papel','#EEF1F6','Fondo general'],['superficie','#FFFFFF','Paneles y tabla'],['tinta','#151D30','Texto principal'],['tinta-2','#4B5569','Texto secundario'],['tinta-3','#5E677A','Ejes y notas'],['trama','#C9D0DC','Bordes y roseta'],['trama-suave','#DDE2EA','Rejilla del gráfico'],['borde-control','#8A93A6','Borde del selector de rango'],['marca','#5B3BD0','Enlaces, foco, control activo'],['marca-suave','#ECE8FB','Fondo de GET y hover'],['serie-venta','#2350C2','Línea de venta'],['serie-compra','#C2367E','Línea de compra']];
+document.getElementById('paleta').innerHTML = paleta.map(([n, h, u]) => `<div class="color"><div style="background:${h}"></div><p><strong>${n}</strong><br><code>${h}</code><br>${u}</p></div>`).join('');
+</script>
+</body>
+</html>
