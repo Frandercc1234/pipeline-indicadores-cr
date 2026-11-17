@@ -30,7 +30,7 @@ from etl.validaciones import (
 )
 
 DIAS_VENTANA_DIARIA = 60
-CONECTAR_TIMEOUT_S = 10
+CONECTAR_TIMEOUT_S = 30  # Neon puede tardar unos segundos en despertar
 TOLERANCIA = Decimal("0.0001")
 MAX_DETALLES = 100  # tope de filas rechazadas o diferencias guardadas en carga.detalle
 

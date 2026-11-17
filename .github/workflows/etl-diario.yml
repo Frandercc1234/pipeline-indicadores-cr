@@ -1,0 +1,108 @@
+name: ETL diario
+
+# 06:15 y 18:15 hora de Costa Rica (UTC-6, sin horario de verano).
+on:
+  schedule:
+    - cron: "15 12 * * *"
+    - cron: "15 0 * * *"
+  workflow_dispatch:
+    inputs:
+      simular_fallo:
+        description: Simula un fallo antes de cargar, para probar la alerta
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+# Nunca corren dos cargas a la vez (comparte el grupo con etl-backfill).
+concurrency: etl
+
+jobs:
+  diario:
+    runs-on: ubuntu-24.04
+    env:
+      BCCR_MODO: real
+      BCCR_BASE_URL: https://apim.bccr.fi.cr/SDDE/api/Bccr.GE.SDDE.Publico.Indicadores.API
+      BCCR_TOKEN: ${{ secrets.BCCR_TOKEN }}
+      DATABASE_URL_ETL: ${{ secrets.DATABASE_URL_ETL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.10"
+          cache: pip
+          cache-dependency-path: etl/requirements.txt
+      - name: Instalar dependencias del ETL
+        run: pip install -r etl/requirements.txt
+
+      - name: Simular fallo
+        if: ${{ inputs.simular_fallo }}
+        run: |
+          echo "Fallo simulado antes de cargar"
+          exit 1
+
+      - name: Cargar los últimos 60 días
+        id: diario
+        working-directory: etl
+        run: |
+          set +e
+          python -m etl diario
+          codigo=$?
+          echo "codigo=$codigo" >> "$GITHUB_OUTPUT"
+          exit "$codigo"
+
+      - name: Validar contra el BCCR
+        id: validar
+        working-directory: etl
+        run: |
+          set +e
+          python -m etl validar
+          codigo=$?
+          echo "codigo=$codigo" >> "$GITHUB_OUTPUT"
+          exit "$codigo"
+
+      - name: Últimas cargas registradas en Neon
+        working-directory: etl
+        run: |
+          python - <<'PY'
+          import os
+
+          import psycopg
+
+          with psycopg.connect(os.environ["DATABASE_URL_ETL"], connect_timeout=30) as conn:
+              print("id | tipo | modo | estado | inicio | fin")
+              for fila in conn.execute(
+                  "SELECT id, tipo, modo, estado, inicio, fin FROM carga ORDER BY id DESC LIMIT 3"
+              ):
+                  print(" | ".join(str(c) for c in fila))
+          PY
+
+      - name: Alertar por GitHub
+        if: ${{ failure() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL_CORRIDA: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          CODIGO_DIARIO: ${{ steps.diario.outputs.codigo }}
+          CODIGO_VALIDAR: ${{ steps.validar.outputs.codigo }}
+          SIMULADO: ${{ inputs.simular_fallo }}
+        run: |
+          if [ "$SIMULADO" = "true" ]; then
+            paso="fallo simulado"; codigo=1
+          elif [ -n "$CODIGO_VALIDAR" ] && [ "$CODIGO_VALIDAR" != "0" ]; then
+            paso="validar"; codigo="$CODIGO_VALIDAR"
+          elif [ -n "$CODIGO_DIARIO" ] && [ "$CODIGO_DIARIO" != "0" ]; then
+            paso="diario"; codigo="$CODIGO_DIARIO"
+          else
+            paso="preparación (checkout o instalación)"; codigo="desconocido"
+          fi
+          cuerpo=$(printf 'El paso **%s** terminó con código **%s**.\n\nCorrida: %s\n' "$paso" "$codigo" "$URL_CORRIDA")
+          gh label create alerta --color B23A48 --description "Falla que requiere atención" 2>/dev/null || true
+          abierto=$(gh issue list --state open --label alerta --json number,title \
+            --jq '.[] | select(.title == "Falla ETL diario") | .number' | head -n 1)
+          if [ -n "$abierto" ]; then
+            gh issue comment "$abierto" --body "$cuerpo"
+          else
+            gh issue create --title "Falla ETL diario" --label alerta --body "$cuerpo"
+          fi
